@@ -88,3 +88,22 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+/// This is the actual code of the system call
+/// Everything else is just "plumbing" so we can get from the user space to here
+int sys_addnum(void)
+{
+	int addval;
+	
+	if(argint(0, &addval) < 0)
+	{
+    	return -1;
+    }
+    
+	/*
+	int num;
+	num = proc->tf->eax; // fetches the number of the system process from %eax
+	num = proc->tf->ebx; // now fetches whatever is in %ebx
+	*/
+	return addval;
+}

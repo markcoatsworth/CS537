@@ -81,6 +81,10 @@ argstr(int n, char **pp)
 // can catch definitions that don't match
 
 // array of function pointers to handlers for all the syscalls
+
+/// Function pointers allow us to pass the name of a function to another function
+/// The following call indicates that if we get a function call with the following number, this is the function that we should invoke
+
 static int (*syscalls[])(void) = {
 [SYS_chdir]   sys_chdir,
 [SYS_close]   sys_close,
@@ -103,6 +107,7 @@ static int (*syscalls[])(void) = {
 [SYS_wait]    sys_wait,
 [SYS_write]   sys_write,
 [SYS_uptime]  sys_uptime,
+[SYS_addnum]  sys_addnum,
 };
 
 // Called on a syscall trap. Checks that the syscall number (passed via eax)
@@ -110,11 +115,17 @@ static int (*syscalls[])(void) = {
 void
 syscall(void)
 {
-  int num;
+  int num; 
   
+  /// First, get number of the system call from %eax (which was put there in usys.S)
   num = proc->tf->eax;
+  /// Now do some basic error checking
   if(num > 0 && num < NELEM(syscalls) && syscalls[num] != NULL) {
+    /// If the number is valid, then we call that particular function
     proc->tf->eax = syscalls[num]();
+    /// will resolve into:
+    ///			  = sys.getpid();
+    /// and hence put the value into %eax
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             proc->pid, proc->name, num);

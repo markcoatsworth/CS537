@@ -2,6 +2,9 @@
 #define SEG_KDATA 2  // kernel data+stack
 #define SEG_KCPU  3  // kernel per-cpu data
 
+### This is where we remember the current program state by pushing it onto the stack, before we run the trap
+### If we didn't do this, we could not resume a process when we return-from-trap
+
   # vectors.S sends all traps here.
 .globl alltraps
 alltraps:
@@ -21,6 +24,7 @@ alltraps:
   movw %ax, %gs
 
   # Call trap(tf), where tf=%esp
+  ### This is actually where the trap() function is called from
   pushl %esp
   call trap
   addl $4, %esp

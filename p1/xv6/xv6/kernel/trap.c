@@ -37,8 +37,11 @@ trap(struct trapframe *tf)
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
+    /// Look at the trap frame for the process
     proc->tf = tf;
+    /// Do the actual system call
     syscall();
+    /// Now we are back: make sure the process has actually been killed
     if(proc->killed)
       exit();
     return;

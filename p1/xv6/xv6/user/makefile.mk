@@ -1,6 +1,7 @@
 
 # user programs
 USER_PROGS := \
+	addnum-test\
 	cat\
 	echo\
 	forktest\
