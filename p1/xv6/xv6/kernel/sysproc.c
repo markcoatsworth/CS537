@@ -94,16 +94,24 @@ sys_uptime(void)
 int sys_addnum(void)
 {
 	int addval;
+	int totalval;
 	
 	if(argint(0, &addval) < 0)
 	{
     	return -1;
     }
     
+    // The following code doesn't work because registers get blown away after return-from-trap. So how to retain values in memory?
+    
+    totalval = proc->tf->ecx;
+    totalval += addval;
+    proc->tf->ecx = totalval;
+    
+    
 	/*
 	int num;
 	num = proc->tf->eax; // fetches the number of the system process from %eax
 	num = proc->tf->ebx; // now fetches whatever is in %ebx
 	*/
-	return addval;
+	return totalval + 5;
 }

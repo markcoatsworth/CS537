@@ -10,12 +10,16 @@
 
 #define NUM_TRIALS 1000
 
+// Function declarations
 
+int SameBirthdayTrial(int _N);
+
+// Main function
 int main(int argc, char **argv)
 {
 	// Declare program variables
-	char *InputFileName;
-	char *OutputFileName;
+	char *InputFileName = NULL;
+	char *OutputFileName = NULL;
 	FILE *InputFile;
 	FILE *OutputFile;	
 
@@ -33,7 +37,24 @@ int main(int argc, char **argv)
         }
     }
     
-    // Seed the random number generator. Only do this once, at the beginning of the program.
+    // Error checking on input and output filenames
+    if(!InputFileName && !OutputFileName)
+    {
+    	fprintf(stderr, "Error: input and output files not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
+		return 0;
+    }
+    else if(!InputFileName)
+    {
+    	fprintf(stderr, "Error: input file not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
+		return 0;
+    }
+    else if(!OutputFileName)
+    {
+    	fprintf(stderr, "Error: output file not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
+		return 0;
+    }
+    
+    // Seed the random number generator. Only do this once at the beginning of the program.
 	srand(time(NULL));
 	
 	// Open input file for reading, open output file for writing
@@ -46,29 +67,38 @@ int main(int argc, char **argv)
 		int InputValue;
 		while(fscanf(InputFile, "%d\n", &InputValue) != EOF)
 		{
-			int NumPositiveTrials = 0;
-			float ProbMatchBirthdays;
-			
-			// Run the trials and determine number of positive trials
-			int trial;
-			for(trial = 0; trial < NUM_TRIALS; trial ++)
+			if(!(InputValue >= 1 && InputValue <= 365))
 			{
-				if(SameBirthdayTrial(InputValue) == 1)
-				{
-					NumPositiveTrials++;
-				}
+				fprintf(stderr, "Error: input values must be integers between 1 and 365\n");
+				return 0;
 			}
-			
-			ProbMatchBirthdays = (float)NumPositiveTrials / (float)NUM_TRIALS;
-			
-			// Write result to output file
-			fprintf(OutputFile, "%.2f\n", ProbMatchBirthdays);
+			else
+			{
+				int NumPositiveTrials = 0;
+				float ProbMatchBirthdays;
+				
+				// Run the trials and determine number of positive trials
+				int trial;
+				for(trial = 0; trial < NUM_TRIALS; trial ++)
+				{
+					if(SameBirthdayTrial(InputValue) == 1)
+					{
+						NumPositiveTrials++;
+					}
+				}
+				
+				ProbMatchBirthdays = (float)NumPositiveTrials / (float)NUM_TRIALS;
+				
+				// Write result to output file
+				fprintf(OutputFile, "%.2f\n", ProbMatchBirthdays);
+			}
 		}
 		fclose(InputFile);
 	}
 	else
 	{
 		fprintf(stderr, "Error: could not open input file.\n");
+		return 0;
 	}
 	
 	// All done!
