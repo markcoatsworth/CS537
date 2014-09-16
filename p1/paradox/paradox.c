@@ -41,17 +41,17 @@ int main(int argc, char **argv)
     if(!InputFileName && !OutputFileName)
     {
     	fprintf(stderr, "Error: input and output files not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
-		return 0;
+		exit(1);
     }
     else if(!InputFileName)
     {
     	fprintf(stderr, "Error: input file not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
-		return 0;
+		exit(1);
     }
     else if(!OutputFileName)
     {
     	fprintf(stderr, "Error: output file not specified.\nUsage: $ ./paradox -i <inputfile> -o <outputfile>\n");
-		return 0;
+		exit(1);
     }
     
     // Seed the random number generator. Only do this once at the beginning of the program.
@@ -60,49 +60,47 @@ int main(int argc, char **argv)
 	// Open input file for reading, open output file for writing
 	InputFile = fopen(InputFileName, "r");
 	OutputFile = fopen(OutputFileName, "w");
-
-	// Read numbers from input file, assuming each number is on a single line
-	if (InputFile != NULL)
-	{
-		int InputValue;
-		while(fscanf(InputFile, "%d\n", &InputValue) != EOF)
-		{
-			if(!(InputValue >= 1 && InputValue <= 365))
-			{
-				fprintf(stderr, "Error: input values must be integers between 1 and 365\n");
-				return 0;
-			}
-			else
-			{
-				int NumPositiveTrials = 0;
-				float ProbMatchBirthdays;
-				
-				// Run the trials and determine number of positive trials
-				int trial;
-				for(trial = 0; trial < NUM_TRIALS; trial ++)
-				{
-					if(SameBirthdayTrial(InputValue) == 1)
-					{
-						NumPositiveTrials++;
-					}
-				}
-				
-				ProbMatchBirthdays = (float)NumPositiveTrials / (float)NUM_TRIALS;
-				
-				// Write result to output file
-				fprintf(OutputFile, "%.2f\n", ProbMatchBirthdays);
-			}
-		}
-		fclose(InputFile);
-	}
-	else
+	
+	// Verify that inputfile is a valid files!
+	if (InputFile == NULL)
 	{
 		fprintf(stderr, "Error: could not open input file.\n");
-		return 0;
+		exit(1);
 	}
+
+	// Read numbers from input file, assuming each number is on a single line	
+	int InputValue;
+	while(fscanf(InputFile, "%d\n", &InputValue) != EOF)
+	{
+		if(!(InputValue >= 1))
+		{
+			fprintf(OutputFile, "0.00\n");
+		}
+		else
+		{
+			int NumPositiveTrials = 0;
+			float ProbMatchBirthdays;
+			
+			// Run the trials and determine number of positive trials
+			int trial;
+			for(trial = 0; trial < NUM_TRIALS; trial ++)
+			{
+				if(SameBirthdayTrial(InputValue) == 1)
+				{
+					NumPositiveTrials++;
+				}
+			}
+			
+			ProbMatchBirthdays = (float)NumPositiveTrials / (float)NUM_TRIALS;
+			
+			// Write result to output file
+			fprintf(OutputFile, "%.2f\n", ProbMatchBirthdays);
+		}
+	}
+	fclose(InputFile);
 	
 	// All done!
-	return 0;
+	exit(0);
 }
 
 // Determine if two people in a group of size _N have the same birthday, using random birthdays

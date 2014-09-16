@@ -94,24 +94,15 @@ sys_uptime(void)
 int sys_addnum(void)
 {
 	int addval;
-	int totalval;
 	
 	if(argint(0, &addval) < 0)
 	{
     	return -1;
     }
     
-    // The following code doesn't work because registers get blown away after return-from-trap. So how to retain values in memory?
+    // Add the value to the addnum_counter integer defined in defs.h 
+    addnum_counter += addval;
     
-    totalval = proc->tf->ecx;
-    totalval += addval;
-    proc->tf->ecx = totalval;
-    
-    
-	/*
-	int num;
-	num = proc->tf->eax; // fetches the number of the system process from %eax
-	num = proc->tf->ebx; // now fetches whatever is in %ebx
-	*/
-	return totalval + 5;
+    // Return the new counter value
+   	return addnum_counter;
 }
