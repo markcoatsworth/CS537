@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 
 int main()
@@ -23,19 +23,14 @@ int main()
 	char *ShellInputArgs[64];
 	int ProcessReturnCode;
 
-	// Should also look at:
-	// -- http://stackoverflow.com/questions/14473751/writing-a-shell-how-to-execute-commands
-
+	// Main shell loop
 	while(1)
 	{
-		
-		
-		//printf("Child process! id=%d\n", getpid());
 		// Display shell prompt
-		printf("(%d) mysh> ", getpid());
+		printf("mysh> ", getpid());
 		
 		// Read user input from the shell prompt
-		// Much of this code is stolen from: http://stackoverflow.com/questions/15539708/passing-an-array-to-execvp-from-the-users-input
+		// Some of this code is stolen from: http://stackoverflow.com/questions/15539708/passing-an-array-to-execvp-from-the-users-input
 		fgets(ShellInput, sizeof(ShellInput), stdin);
 	    	
 		// Parse the input arguments
@@ -61,34 +56,36 @@ int main()
 			}
 		}
 			
-		printf("Now scanning for special cases...\n");
-			
 		// Check for special cases: exit, cd and pwd
 		if(strcmp(ShellInputArgs[0], "exit") == 0)
 		{
-			printf("Exiting now...\n");
 			exit(0);
 		}
+		else if(strcmp(ShellInputArgs[0], "pwd") == 0)
+		{
+			char *CurrentDirectory;
+			CurrentDirectory = (char *)malloc(sizeof(char) * 512);
+			getcwd(CurrentDirectory, 512);
+			printf("%s\n", CurrentDirectory);
+		}
+		// If this not a special case, then fork the process and execute the user input!
 		else
 		{
 			ProcessReturnCode = fork();
-			printf("Process Return Code = %d\n", ProcessReturnCode);
 	
-			// Child process: display the prompt, wait for user input, then process it
+			// Child process: execute the command + arguments passed in by the user
 			if(ProcessReturnCode == 0)
 			{
-				
-				// Start the new process
 				execvp(ShellInputArgs[0], ShellInputArgs);
 				
-		    
+				// If execvp encounters any error, it will fail and then will process the following code
+				perror("Error!\n"); 
+				
 			}
-			// Parent process: do nothing, just wait for the child to end, then repeat the loop
+			// Parent process: do nothing, just wait for the child to end
 			else if(ProcessReturnCode > 0)
 			{		
-					
 				wait();
-				//printf("Parent process! id=%d\n", getpid());
 			}
 			// Error: fork failed
 			else
