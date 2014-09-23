@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 
 int main()
 {
@@ -19,8 +20,16 @@ int main()
 		close(1); // close the file descriptor associated with standard output
 		
 		// now open a new file
-		open("newfile", O_CREAT | O_RDWR);
+		// Use this for piping and redirectional output
+		
+		// open("newfile", O_CREAT | O_RDWR);
+		
 		// Linux will automatically pass it the lowest file descriptor, which in our case is 1
+		
+		// Here is an even more elegant way of doing this:
+		int fd = open("newfile", O_CREAT | O_RDWR);
+		dup2(fd, 1);
+		
 		
 		// We want to tell the child to take a bianry, then run it for us
 		// The way we do that is using execvp... this is a system process that allows us to run a different process

@@ -19,13 +19,24 @@ int main()
 {
 	// Shell variables
 	char **NextArg;
+	char OutputFileName[256];
+	char *PipedArgs[64];
 	char ShellInput[1024];
 	char *ShellInputArgs[64];
+	int IsAppendRedirected;
+	int IsOverwritedRedirected;
+	int IsPiped;
+	int StandardOutputDescriptor = dup(STDOUT_FILENO);
 	int ProcessReturnCode;
 
 	// Main shell loop
 	while(1)
 	{
+		// Reset all flags and other variables
+		IsAppendRedirected = 0;
+		IsOverwritedRedirected = 0;
+		IsPiped = 0;
+	
 		// Display shell prompt
 		printf("mysh> ", getpid());
 		
@@ -44,6 +55,7 @@ int main()
 		*NextArg = NULL;
 	
 		
+		
 		// Debug: output the input arguments
 		if(DEBUG == 1)
 		{
@@ -56,7 +68,35 @@ int main()
 			}
 		}
 			
-		// Check for special cases: exit, cd and pwd
+		// Check for special characters: overwrite redirection (">"), append redirection (">>"), and pipes ("|").
+		int ArgIndex = 0;
+        for (NextArg = ShellInputArgs; *NextArg != 0; NextArg++)
+        {
+			if(strcmp(*NextArg, ">") == 0)
+			{
+				IsOverwritedRedirected = 1;
+				// Set NextArg to NULL, so that only the tokens before the pipe will get executed
+				*NextArg = NULL;
+				// Now set the output filename, and then break out of the loop
+				NextArg++;
+				strcpy(OutputFileName, *NextArg);
+				break;
+			}
+			else if(strcmp(*NextArg, ">>") == 0)
+			{
+				IsAppendRedirected = 1;
+				// Set NextArg to NULL, so that only the tokens before the pipe will get executed
+				*NextArg = NULL;
+				// Now set the output filename, and then break out of the loop
+				NextArg++;
+				strcpy(OutputFileName, *NextArg);
+				break;
+			}
+			ArgIndex++;
+
+		}
+		
+		// Check for built in commands: exit, cd and pwd
 		if(strcmp(ShellInputArgs[0], "exit") == 0)
 		{
 			exit(0);
@@ -68,14 +108,47 @@ int main()
 			getcwd(CurrentDirectory, 512);
 			printf("%s\n", CurrentDirectory);
 		}
-		// If this not a special case, then fork the process and execute the user input!
+		else if(strcmp(ShellInputArgs[0], "cd") == 0)
+		{
+			if(ShellInputArgs[1] != NULL)
+			{
+				chdir(ShellInputArgs[1]);
+			}
+			else
+			{
+				chdir("~");
+			}
+		}
+		// If this not a built in command,  check for special characters, then fork the input!
 		else
 		{
+			// If any special characters were found, redirect output accordingly
+			if(IsOverwritedRedirected == 1)
+			{
+				// Close the file descriptor associated with standard output
+				close(1); 
+				// Create the output file descriptor, in create mode, set to 644 permissions
+				int OutputFileDescriptor = open(OutputFileName, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+				// Now open the output file descriptor
+				dup2(OutputFileDescriptor, 1);
+			}
+			else if(IsAppendRedirected == 1)
+			{
+				// Close the file descriptor associated with standard output
+				close(1);
+				// Create the output file descriptor, in append mode, set to 644 permissions
+				int OutputFileDescriptor = open(OutputFileName, O_APPEND | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+				// Now open the output file descriptor
+				dup2(OutputFileDescriptor, 1);
+			}
+		
+			// At this point, fork the process
 			ProcessReturnCode = fork();
 	
 			// Child process: execute the command + arguments passed in by the user
 			if(ProcessReturnCode == 0)
 			{
+				// If output is redirected
 				execvp(ShellInputArgs[0], ShellInputArgs);
 				
 				// If execvp encounters any error, it will fail and then will process the following code
@@ -86,6 +159,7 @@ int main()
 			else if(ProcessReturnCode > 0)
 			{		
 				wait();
+				dup2(StandardOutputDescriptor, 1);
 			}
 			// Error: fork failed
 			else
