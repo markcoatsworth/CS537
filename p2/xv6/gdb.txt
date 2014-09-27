@@ -1,0 +1,34 @@
+$ make qeum-nox-gdb
+
+This starts qemu, but waits for gdb before it really gets started
+
+In another terminal prompt (in the same directory) run:
+
+$ gdb
+
+You also need to have a file called ~/.gdbinit with:
+
+set solib-search-path
+add-auto-load-safe-path /afs/cs.wisc.edu/u/v/i/coatsworth/private/cs537/...
+
+How to use:
+
+(gdb) c
+ -> Continue execution
+
+(gdb) break scheduler
+ -> Sets a breakpoint so that every time the scheduler() function is called, it stops and waits
+
+(gdb) c
+ -> Now continue the execution and wait for the scheduler() function is run 
+ 
+(gdb) l
+ -> Shows the code at this point
+ 
+(gbd) print p
+ -> Shows the memory location
+ >> $1 = (struct proc *) 0x12345678
+ 
+ (gdb) print p->state
+ -> Shows the process state
+ >> $2 = SLEEPING

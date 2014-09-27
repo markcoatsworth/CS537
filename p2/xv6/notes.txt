@@ -1,0 +1,1 @@
+* The scheduler() function in /kernel/proc. is where the main stuff happens
