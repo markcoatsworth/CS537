@@ -199,6 +199,7 @@ int main()
 				{
 					close(1);
 					dup(PipeDescriptor[1]);
+					close(PipeDescriptor[1]);
 				}
 			
 				// Execute the shell input
