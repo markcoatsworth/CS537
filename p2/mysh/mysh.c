@@ -42,7 +42,7 @@ int main()
 		IsPiped = 0;
 	
 		// Display shell prompt
-		printf("mysh> ", getpid());
+		printf("[%d] mysh> ", getpid());
 		
 		// Read user input from the shell prompt
 		// Some of this code is stolen from: http://stackoverflow.com/questions/15539708/passing-an-array-to-execvp-from-the-users-input
@@ -74,8 +74,8 @@ int main()
 			
 		// Check for special characters: overwrite redirection (">"), append redirection (">>"), and pipes ("|").
 		int ArgIndex = 0;
-        	for (NextArg = ShellInputArgs; *NextArg != 0; NextArg++)
-        	{
+    	for (NextArg = ShellInputArgs; *NextArg != 0; NextArg++)
+    	{
 			if(strcmp(*NextArg, ">") == 0)
 			{
 				IsOverwritedRedirected = 1;
@@ -122,14 +122,14 @@ int main()
 			int ArgIndex = 0;
 			puts("Input arguments:");
 			for (NextArg = ShellInputArgs; *NextArg != 0; NextArg++)
-	       	 {
+	       	{
 				printf("[%d] %s\n", ArgIndex, *NextArg);
 				ArgIndex++;
 			}	        	
 			puts("Piped arguments:");
 			ArgIndex = 0;
-	        	for (NextArg = PipedArgs; *NextArg != 0; NextArg++)
-	        	{
+	        for (NextArg = PipedArgs; *NextArg != 0; NextArg++)
+	        {
 				printf("[%d] %s\n", ArgIndex, *NextArg);
 				ArgIndex++;
 			}
@@ -189,7 +189,8 @@ int main()
 			}
 		
 			// At this point, fork the process
-			ProcessReturnCode = fork();
+			ProcessReturnCode = fork();			
+			printf("[%d] Forked! ProcessReturnCode=%d\n", getpid(), ProcessReturnCode);
 
 			// Child process: execute the command + arguments passed in by the user
 			if(ProcessReturnCode == 0)
@@ -197,8 +198,7 @@ int main()
 				// If the process was piped, redirect child process output to the pipe
 				if(IsPiped == 1)
 				{
-					close(1);
-					dup(PipeDescriptor[1]);
+					dup2(PipeDescriptor[1], 1);
 				}
 			
 				// Execute the shell input
@@ -211,37 +211,43 @@ int main()
 			// Parent process: wait for the child to end
 			else if(ProcessReturnCode > 0)
 			{	
-				wait();
-				
+				/*
+				int WaitReturnVal = wait();
+				printf("[%d] Finished waiting for PID=%d, moving on...\n", getpid(), WaitReturnVal);
+				*/
 				// If this process was piped, we now send the piped output to a new process
 				if(IsPiped == 1)
 				{
-										
+					// Shut down the piped output
+					close(PipeDescriptor[1]);
+					dup2(StandardOutputDescriptor, 1);
+				
 					// Fork again!
 					PipeProcessReturnCode = fork();
+					printf("[%d] Forked again! PipeProcessReturnCode=%d\n", getpid(), PipeProcessReturnCode);
+					//wait();
+					
+					//close(PipeDescriptor[1]);
+					
 					// Child process: redirect piped input, and run the new process
-					if(PipeProcessReturnCode == 0)
+					if(PipeProcessReturnCode > 0)
 					{
+						printf("[%d] I'm about to redirect input and execute the forked process\n", getpid());
+						
 						// Redirect standard input from the pipe
 						close(0);
-						dup(PipeDescriptor[0]);	
-						//printf("About to execute pipe process. PipeDescriptor[0]=%d\n", PipeDescriptor[0]);
+						dup2(PipeDescriptor[0], 0);
+						
 						// Now execute the piped process, using redirected input
 						execvp(PipedArgs[0], PipedArgs);
-						printf("Shouldn't be seeing this...\n");
-					}
-					else if(PipeProcessReturnCode > 0)
-					{
-						printf("Pipe process parent waiting for child to end...\n");
-						wait();
-						printf("Back from pipe process\n");
-						
-						
 					}
 					else
 					{
-						printf("Mysterious pipe process else condition...\n");
+						printf("[%d] I'm waiting for the child to return...\n", getpid());
+						int PipedWaitReturnVal = wait();
+						printf("Finished waiting for piped PID=%d, moving on...\n", PipedWaitReturnVal);
 					}
+					
 										
 				}
 			}
