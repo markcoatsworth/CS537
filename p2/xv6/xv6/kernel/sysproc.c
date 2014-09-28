@@ -91,9 +91,10 @@ sys_uptime(void)
 }
 
 int sys_reserve(void)
-{
+{	
 	syspstat->inuse[0] = 666;
-	return proc->pid;
+	syspstat->pid[0] = 666;	
+	return (int)&syspstat;
 }
 
 int sys_spot(void)
@@ -103,18 +104,32 @@ int sys_spot(void)
 
 int sys_getpinfo(void)
 {
-	int ClientPstatLocation;
+	// Declare variables
+	int userpstat_loc;
+	struct pstat *userpstat;
 	
-	if(argint(0, &ClientPstatLocation) < 0)
+	// Retrieve the memory location of user pstat struct from the stack
+	if(argint(0, &userpstat_loc) < 0)
 	{
     	return -1;
     }
 	
+	// Set up the pointer to the user pstat location
+	userpstat = (struct pstat*)userpstat_loc;
 	
-	struct pstat *userpstat;
-	userpstat = (struct pstat*)ClientPstatLocation;
 	
-	userpstat->inuse[0]=1488;
 	
-	return 0;
+	// Now populate the user pstat with data from the system pstat
+	int i;
+	for(i = 0; i < NPROC; i ++)
+	{
+		userpstat->inuse[i] 	= syspstat->inuse[i];
+		userpstat->pid[i] 		= syspstat->pid[i];
+		userpstat->chosen[i] 	= syspstat->chosen[i];
+		userpstat->time[i] 		= syspstat->time[i];
+		userpstat->charge[i] 	= syspstat->charge[i];
+	}
+	
+	// All done, exit
+	return (int)&syspstat;
 }

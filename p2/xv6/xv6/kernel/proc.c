@@ -4,6 +4,7 @@
 #include "mmu.h"
 #include "x86.h"
 #include "proc.h"
+#include "pstat.h"
 #include "spinlock.h"
 
 struct {
@@ -259,6 +260,10 @@ void
 scheduler(void)
 {
   struct proc *p;
+  
+  // Allocate memory for the pstat process table
+  syspstat = (struct pstat*)kalloc();
+  memset(syspstat, 0, sizeof(struct pstat));
 
   /// Inifinite loop: runs as long as xv6 is running
   for(;;){
