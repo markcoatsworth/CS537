@@ -149,14 +149,21 @@ int main()
 		}
 		else if(strcmp(ShellInputArgs[0], "cd") == 0)
 		{
-			if(ShellInputArgs[1] != NULL)
+			// If no directory specified, then default to home
+			if(ShellInputArgs[1] == NULL)
 			{
-				chdir(ShellInputArgs[1]);
+				ShellInputArgs[1] = getenv("HOME");
 			}
-			else
+
+			// Only allow one argument; force the second argument to null
+			ShellInputArgs[2] = NULL;
+
+			// Now change directory, checking for errors
+			if(chdir(ShellInputArgs[1]) != 0)
 			{
-				chdir(getenv("HOME"));
+				perror("Error"); // actual error message will get appended by the system call
 			}
+
 		}
 		// If this not a built in command,  check for special characters, then fork the input!
 		else
@@ -202,30 +209,26 @@ int main()
 				}
 			
 				// Execute the shell input
-				execvp(ShellInputArgs[0], ShellInputArgs);
-				
-				// If execvp encounters any error, it will fail and then will process the following code
-				perror("Error!\n"); 
+				if(execvp(ShellInputArgs[0], ShellInputArgs) < 0)
+				{	
+					// If execvp encounters any error, it will fail and then will process the following code
+					perror("Error"); // This will be followed by the error output from the system 
+					exit(1);
+				}
 				
 			}
 			// Parent process: wait for the child to end
 			else if(ProcessReturnCode > 0)
 			{	
-				/*
 				int WaitReturnVal = wait();
 				printf("[%d] Finished waiting for PID=%d, moving on...\n", getpid(), WaitReturnVal);
-				*/
+				
 				// If this process was piped, we now send the piped output to a new process
 				if(IsPiped == 1)
 				{
-					// Shut down the piped output
-					close(PipeDescriptor[1]);
-					dup2(StandardOutputDescriptor, 1);
-				
 					// Fork again!
 					PipeProcessReturnCode = fork();
 					printf("[%d] Forked again! PipeProcessReturnCode=%d\n", getpid(), PipeProcessReturnCode);
-					//wait();
 					
 					//close(PipeDescriptor[1]);
 					
@@ -234,8 +237,10 @@ int main()
 					{
 						printf("[%d] I'm about to redirect input and execute the forked process\n", getpid());
 						
+						// Redirect output to standard output
+						dup2(StandardOutputDescriptor, 1);
+
 						// Redirect standard input from the pipe
-						close(0);
 						dup2(PipeDescriptor[0], 0);
 						
 						// Now execute the piped process, using redirected input
