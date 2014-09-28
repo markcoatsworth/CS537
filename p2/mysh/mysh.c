@@ -152,10 +152,12 @@ int main()
 			// If no directory specified, then default to home
 			if(ShellInputArgs[1] == NULL)
 			{
-				ShellInputArgs[1] = getenv("HOME");
+				ShellInputArgs[1] = malloc(sizeof(char) * strlen(getenv("HOME")));
+				strcpy(ShellInputArgs[1], getenv("HOME"));
 			}
 
 			// Now change directory, checking for errors
+			// Some sort of bug here: whenever we hit an error, subsequent processes drop off without exiting
 			if(chdir(ShellInputArgs[1]) != 0)
 			{
 				perror("Error"); // actual error message will get appended by the system call
@@ -189,6 +191,7 @@ int main()
 				if(pipe(PipeDescriptor) == 1)
 				{
 					perror("Error: pipe failed\n");
+					break;
 				}
 			}
 		
@@ -203,6 +206,9 @@ int main()
 				if(IsPiped == 1)
 				{
 					dup2(PipeDescriptor[1], 1);
+					// Now close all pipe descriptors
+					close(PipeDescriptor[0]);
+					
 				}
 			
 				// Execute the shell input
@@ -217,31 +223,33 @@ int main()
 			// Parent process: wait for the child to end
 			else if(ProcessReturnCode > 0)
 			{	
-				int WaitReturnVal = wait();
-				printf("[%d] Finished waiting for PID=%d, moving on...\n", getpid(), WaitReturnVal);
-				
+				// If not piped, just wait for the child process to exit, and carry on
+				if(IsPiped == 0)
+				{
+					int WaitReturnVal = waitpid(ProcessReturnCode);
+					//printf("[%d] Finished waiting, WaitReturnVal=%d, moving on...\n", getpid(), WaitReturnVal);
+				}
 				// If this process was piped, we now send the piped output to a new process
-				if(IsPiped == 1)
+				else
 				{
 					// Fork again!
 					PipeProcessReturnCode = fork();
 					printf("[%d] Forked again! PipeProcessReturnCode=%d\n", getpid(), PipeProcessReturnCode);
 					
-					//close(PipeDescriptor[1]);
+					close(PipeDescriptor[1]);
 					
 					// Child process: redirect piped input, and run the new process
-					if(PipeProcessReturnCode > 0)
+					if(PipeProcessReturnCode == 0)
 					{
 						printf("[%d] I'm about to redirect input and execute the forked process\n", getpid());
 						
-						// Redirect output to standard output
-						//dup2(StandardOutputDescriptor, 1);
-
 						// Redirect standard input from the pipe
 						dup2(PipeDescriptor[0], 0);
+						// Now close all pipe descriptors
+												
 						close(PipeDescriptor[0]);						
-						close(PipeDescriptor[1]);
 						
+
 						// Now execute the piped process, using redirected input
 						if(execvp(PipedArgs[0], PipedArgs) < 0)
 						{
@@ -249,20 +257,19 @@ int main()
 							perror("Error"); // This will be followed by the error output from the system 
 							exit(1);
 						}
-						else
-						{
-							printf("[%d] Execution succeeded? Shouldn't be seeing this message...\n", getpid());
-						}
 					}
+					// Parent process
 					else
 					{
 						printf("[%d] I'm waiting for the child to return...\n", getpid());
 						int PipedWaitReturnVal = wait();
-						printf("Finished waiting for piped PID=%d, moving on...\n", PipedWaitReturnVal);						
+						wait();
+						printf("[%d] After second fork, PipedWaitReturnVal returned %d, moving on...\n", getpid(), PipedWaitReturnVal);						
 						
 						if(PipedWaitReturnVal == -1)
 						{
-							exit(1);
+							//exit(1);
+					
 						}
 						
 						
@@ -279,7 +286,9 @@ int main()
 
 		}
 
-		// Finally, reset standard input and output	
+		// Finally, reset standard input and output
+		close(PipeDescriptor[0]);
+		close(PipeDescriptor[1]);
 		dup2(StandardInputDescriptor, 0);			
 		dup2(StandardOutputDescriptor, 1);		
 		
