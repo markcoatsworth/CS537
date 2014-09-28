@@ -160,7 +160,7 @@ int main()
 			// Some sort of bug here: whenever we hit an error, subsequent processes drop off without exiting
 			if(chdir(ShellInputArgs[1]) != 0)
 			{
-				perror("Error"); // actual error message will get appended by the system call
+				printf("Error: could not open directory\n"); // actual error message will get appended by the system call
 			}
 
 		}
@@ -202,13 +202,11 @@ int main()
 			// Child process: execute the command + arguments passed in by the user
 			if(ProcessReturnCode == 0)
 			{
-				// If the process was piped, redirect child process output to the pipe
+				// If the process was piped, redirect child process output to the pipe, and close the input descriptor
 				if(IsPiped == 1)
 				{
 					dup2(PipeDescriptor[1], 1);
-					// Now close all pipe descriptors
 					close(PipeDescriptor[0]);
-					close(PipeDescriptor[1]);
 				}
 			
 				// Execute the shell input
@@ -234,22 +232,18 @@ int main()
 				{
 					// Fork again!
 					PipeProcessReturnCode = fork();
-					printf("[%d] Forked again! PipeProcessReturnCode=%d\n", getpid(), PipeProcessReturnCode);
+					//printf("[%d] Forked again! PipeProcessReturnCode=%d\n", getpid(), PipeProcessReturnCode);
 					
-					//close(PipeDescriptor[1]);
+					// Now close the pipe output descriptor, we don't need it anymore
+					close(PipeDescriptor[1]);
 					
-					// Child process: redirect piped input, and run the new process
+					// Child process: redirect piped input, then close the pipe input descriptor
 					if(PipeProcessReturnCode == 0)
 					{
-						printf("[%d] I'm about to redirect input and execute the forked process\n", getpid());
-						
-						// Redirect standard input from the pipe
+						//printf("[%d] I'm about to redirect input and execute the forked process\n", getpid());
 						dup2(PipeDescriptor[0], 0);
-						// Now close all pipe descriptors
-						close(PipeDescriptor[1]);						
 						close(PipeDescriptor[0]);						
 						
-
 						// Now execute the piped process, using redirected input
 						if(execvp(PipedArgs[0], PipedArgs) < 0)
 						{
@@ -261,21 +255,11 @@ int main()
 					// Parent process
 					else
 					{
-						printf("[%d] I'm waiting for the child to return...\n", getpid());
-						int PipedWaitReturnVal = wait();
+						// Now we have two child process to wait for close
 						wait();
-						printf("[%d] After second fork, PipedWaitReturnVal returned %d, moving on...\n", getpid(), PipedWaitReturnVal);						
-						
-						if(PipedWaitReturnVal == -1)
-						{
-							//exit(1);
-					
-						}
-						
-						
+						wait();
+						//printf("[%d] After second fork, PipedWaitReturnVal returned %d, moving on...\n", getpid(), PipedWaitReturnVal);						
 					}
-					
-										
 				}
 			}
 			// Error: fork failed
