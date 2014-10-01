@@ -8,6 +8,7 @@ struct inode;
 struct pipe;
 struct proc;
 struct pstat;
+struct ptable;
 struct spinlock;
 struct stat;
 

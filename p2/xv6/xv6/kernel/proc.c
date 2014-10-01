@@ -157,6 +157,26 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+  
+  // Also create an entry in the pstat table for this process. Take first slot that is not in use.
+  for(i = 0; i < NPROC; i++)
+  {
+  	if(syspstat->inuse[i] == 0)
+  	{
+  	  syspstat->inuse[i] 	= 1;
+  	  syspstat->pid[i] 		= pid;
+  	  safestrcpy(syspstat->pname[i], np->name, sizeof(np->name));
+	  syspstat->level[i]	= 2;
+	  syspstat->percent[i]	= 0;
+	  syspstat->bid[i]		= 0;
+  	  syspstat->chosen[i] 	= 0;
+  	  syspstat->time[i]		= 0;
+  	  syspstat->charge[i] 	= 0;
+  	  break;
+  	}
+  }
+  //cprintf("Added new process, np->pid=%d, np->name=%s, proc->pid=%d, proc->name=%s\n", np->pid, np->name, proc->pid, proc->name);
+  
   return pid;
 }
 
@@ -220,6 +240,7 @@ wait(void)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
+      
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -261,12 +282,13 @@ scheduler(void)
 {
   struct proc *p;
   
-  // Allocate memory for the pstat process table
+  // Allocate memory for the pstat process table, and initialize it all to 0
   syspstat = (struct pstat*)kalloc();
   memset(syspstat, 0, sizeof(struct pstat));
 
   /// Inifinite loop: runs as long as xv6 is running
   for(;;){
+  
     // Enable interrupts on this processor.
     sti();
 
@@ -275,6 +297,7 @@ scheduler(void)
     /// Checks all the processes in the system, and looks to see if they're in a runnable state
     /// ptable.proc stores all the processes; it is limited to 64 processes in xv6
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    
       // This is where it checks if the process state is runnable; if not, it just continues the loop
       if(p->state != RUNNABLE)
         continue;
@@ -289,12 +312,33 @@ scheduler(void)
       switchuvm(p);
       /// Now set the process state to running -- this is the point where we decide to run this process
       p->state = RUNNING;
+      // Now identify the matching entry in the system pstat table, and update it
+      int i;
+      for(i = 0; i < NPROC; i ++)
+      {
+      	if(syspstat->pid[i] == p->pid)
+      	{
+      		syspstat->chosen[i]++;
+      		syspstat->time[i] += 10;
+      		syspstat->charge[i] += (10 * syspstat->bid[i]);
+      		// Update the process name in the pstat table. This is such a cheap hack, but I'll remove it after debugging...
+      		safestrcpy(syspstat->pname[i], p->name, sizeof(p->name));
+      	}
+      }
       //cprintf("Going to run %s [pid %d]\n", proc->name, proc->pid);
       /// Now we have to move from the kernel context to the user content
       /// This next call basically says to save the CPU scheduled context, and switch to the process context
       /// This is done with assembly line code in swtch.S
       /// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
       /// Note: the cpu variable is a global in proc.h
+      /*
+      int c;
+      for(c = 0; c < ncpu; c ++)
+      {
+      	cprintf("CPU%d: cpus[c].id=%d, &scheduler=%d\n", c, cpus[c].id, (int)&cpus[c].scheduler);
+      }
+      */
+      //cprintf("The CPU we are about to swtch to: %d, &scheduler=%d\n", cpu->id, (int)&cpu->scheduler);
       swtch(&cpu->scheduler, proc->context);
       /// Tbe following line is what happens after it gets switched back via timer interrupt and yield
       /// It gets called back in /kernel/trap.c
@@ -471,5 +515,4 @@ procdump(void)
     cprintf("\n");
   }
 }
-
 

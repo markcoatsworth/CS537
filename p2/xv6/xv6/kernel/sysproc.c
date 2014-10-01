@@ -90,18 +90,96 @@ sys_uptime(void)
   return xticks;
 }
 
+
+// Mark a process as a reserved process (level 1), and guarantees 
+// (probabilistically) the given portion of CPU time. 
 int sys_reserve(void)
 {	
-	syspstat->inuse[0] = 666;
-	syspstat->pid[0] = 666;	
-	return (int)&syspstat;
+	// Declare variables
+	int percent;
+	int MaxCpuTime = 100 * ncpu;
+	int ReservedCpuTime = 0;
+	int ThisProcessIndex = 0;
+	
+	// Set the value of percent from the stack
+	if(argint(0, &percent) < 0)
+	{
+    	return 1;
+    }
+    
+    // Process fails if percent is not between 0 and 100
+    if(percent < 0 || percent > 100)
+    {
+    	return 1;
+    }
+    
+    // First make sure this will not exceed maximum allowable cpu time
+    int i;
+    for(i = 0; i < NPROC; i ++)
+    {
+    	if(syspstat->inuse[i] == 1)
+    	{
+    		ReservedCpuTime += syspstat->percent[i];
+    		if(proc->pid == syspstat->pid[i])
+	    	{
+	    		ThisProcessIndex = i;
+	    	}
+	    }
+    }
+
+	// Reserve cpu time on the process
+    if((ReservedCpuTime + percent) <= MaxCpuTime)
+    {
+    	syspstat->level[ThisProcessIndex] = 1;
+    	syspstat->percent[ThisProcessIndex] = percent;
+    	syspstat->bid[ThisProcessIndex] = 100;
+    }
+    else
+    {
+    	return 1;
+    }
+    
+    // If we made it this far then everything worked. Return success!
+    return 0;
 }
 
+// Mark a process for spot computing (level 2). 
+// The bid is in nanodollars per millisecond of CPU time. 
 int sys_spot(void)
 {
-	return 0;
+	// Declare variables
+	int bid;
+	
+	// Set the value of percent from the stack
+	if(argint(0, &bid) < 0)
+	{
+    	return 1;
+    }
+    
+    // Process fails if bid is less than 0
+    if(bid < 0)
+    {
+    	return 1;
+    }
+    
+    // The values of process level and bid price are in the main process table. Set them here.
+    int i;
+    for(i = 0; i < NPROC; i ++)
+    {
+    	if(proc->pid == syspstat->pid[i])
+    	{
+    		syspstat->level[i] = 2;
+    		syspstat->level[i] = bid;
+    	}
+    }
+    
+    // Return success!
+    return 0;
 }
 
+// Return some basic information about each active process, including its 
+// process ID, how many times it has been chosen to run, how much time it 
+// has run (ms), how much it has been charged (dollars).
 int sys_getpinfo(void)
 {
 	// Declare variables
@@ -114,10 +192,8 @@ int sys_getpinfo(void)
     	return -1;
     }
 	
-	// Set up the pointer to the user pstat location
+	// Set a pointer to the user pstat location (which has already been allocated)
 	userpstat = (struct pstat*)userpstat_loc;
-	
-	
 	
 	// Now populate the user pstat with data from the system pstat
 	int i;
@@ -125,11 +201,15 @@ int sys_getpinfo(void)
 	{
 		userpstat->inuse[i] 	= syspstat->inuse[i];
 		userpstat->pid[i] 		= syspstat->pid[i];
+		strncpy(userpstat->pname[i], syspstat->pname[i], 16);
+		userpstat->level[i]		= syspstat->level[i];
+	  	userpstat->percent[i]	= syspstat->percent[i];
+	  	userpstat->bid[i]		= syspstat->bid[i];
 		userpstat->chosen[i] 	= syspstat->chosen[i];
 		userpstat->time[i] 		= syspstat->time[i];
 		userpstat->charge[i] 	= syspstat->charge[i];
 	}
 	
 	// All done, exit
-	return (int)&syspstat;
+	return 0;
 }
