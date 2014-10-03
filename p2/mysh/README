@@ -1,0 +1,18 @@
+Mark Coatsworth (coatsworth@cs.wisc.edu)
+CS537: Introduction to Operating Systems
+October 3, 2014
+
+Project P2a: The Unix Shell
+
+I implemented the mysh shell by myself (with some help from Google and Stack Overflow).
+
+It currently scores 23 out of 24 in the provided test.
+
+None of the extra credit tests are implemented. 
+
+The code I've used to parse the shell input is largely taken from the following article:
+
+http://stackoverflow.com/questions/15539708/passing-an-array-to-execvp-from-the-users-input
+
+This works by using the strtok() function to break the input into a series of tokens, using the space and newline characters as delimiters. 
+It then assigns each token to a char pointer array.

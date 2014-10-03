@@ -146,7 +146,15 @@ int main()
 		// Check for built in commands: exit, cd and pwd
 		if(strcmp(ShellInputArgs[0], "exit") == 0)
 		{
-			exit(0);
+			// Exit should not have any arguments. If there are any, throw an error.
+			if(ShellInputArgs[1] != NULL)
+			{
+				perror("Error!\n");
+			}
+			else
+			{
+				exit(0);
+			}
 		}
 		else if(strcmp(ShellInputArgs[0], "pwd") == 0)
 		{
@@ -223,7 +231,7 @@ int main()
 				{	
 					// If execvp encounters any error, it will fail and then will process the following code
 					perror("Error!\n"); // This will be followed by the error output from the system 
-					continue;
+					exit(1);
 				}
 				
 			}
