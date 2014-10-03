@@ -51,6 +51,14 @@ int main()
 		// Parse the input arguments
 		NextArg = ShellInputArgs;
 		char *ThisArg = strtok(ShellInput, " \n");
+		
+		// Check for blank line before parsing
+		if(ThisArg == NULL)
+		{
+			continue;
+		}
+		
+		// Tokenize the input string
 		while (ThisArg != NULL)
     	{
 			*NextArg++ = ThisArg;
@@ -160,7 +168,8 @@ int main()
 			// Some sort of bug here: whenever we hit an error, subsequent processes drop off without exiting
 			if(chdir(ShellInputArgs[1]) != 0)
 			{
-				printf("Error: could not open directory\n"); // actual error message will get appended by the system call
+				fprintf(stderr, "Error!\n"); // actual error message will get appended by the system call
+				
 			}
 
 		}
@@ -182,7 +191,7 @@ int main()
 				// Close the file descriptor associated with standard output
 				close(1);
 				// Set the output file descriptor, in append mode, set to 644 permissions
-				int OutputFileDescriptor = open(OutputFileName, O_APPEND | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+				int OutputFileDescriptor = open(OutputFileName, O_CREAT | O_APPEND | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 				// Now open the output file descriptor
 				dup2(OutputFileDescriptor, 1);
 			}
@@ -213,8 +222,8 @@ int main()
 				if(execvp(ShellInputArgs[0], ShellInputArgs) < 0)
 				{	
 					// If execvp encounters any error, it will fail and then will process the following code
-					perror("Error"); // This will be followed by the error output from the system 
-					exit(1);
+					perror("Error!\n"); // This will be followed by the error output from the system 
+					continue;
 				}
 				
 			}

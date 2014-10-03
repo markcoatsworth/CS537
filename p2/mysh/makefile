@@ -1,7 +1,4 @@
-all: mysh
-	./mysh
-	
-mysh:
+all:
 	gcc -o mysh mysh.c
 	
 clean:
