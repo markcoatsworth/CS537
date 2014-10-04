@@ -130,9 +130,14 @@ int sys_reserve(void)
 	// Reserve cpu time on the process
     if((ReservedCpuTime + percent) <= MaxCpuTime)
     {
+    	// Add to the pstat table
     	syspstat->level[ThisProcessIndex] = 1;
     	syspstat->percent[ThisProcessIndex] = percent;
     	syspstat->bid[ThisProcessIndex] = 100;
+    	// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
+		proc->level = 1;
+		proc->percent = percent;
+		proc->bid = 100;
     }
     else
     {
@@ -169,7 +174,10 @@ int sys_spot(void)
     	if(proc->pid == syspstat->pid[i])
     	{
     		syspstat->level[i] = 2;
-    		syspstat->level[i] = bid;
+    		syspstat->bid[i] = bid;
+    		// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
+			proc->level = 2;
+			proc->bid = bid;
     	}
     }
     

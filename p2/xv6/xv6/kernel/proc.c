@@ -14,6 +14,8 @@ struct {
 
 static struct proc *initproc;
 
+static int rnd_seed;
+
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -54,6 +56,11 @@ found:
     return 0;
   }
   sp = p->kstack + KSTACKSIZE;
+  
+  // Initialize the level, bid and percent
+  p->level = 2;
+  p->percent = 0;
+  p->bid = 0;
   
   // Leave room for trap frame.
   sp -= sizeof *p->tf;
@@ -280,74 +287,143 @@ wait(void)
 void
 scheduler(void)
 {
+  int LotteryCounter;
+  int LotteryWinningTicket = 0;
+  int HighestBid;
   struct proc *p;
+  
+  // Seed the random number generator
+  set_rnd_seed((int)ticks);
   
   // Allocate memory for the pstat process table, and initialize it all to 0
   syspstat = (struct pstat*)kalloc();
   memset(syspstat, 0, sizeof(struct pstat));
 
+  // The random number generator takes some time to get seeded
+  // Do not start the scheduler until it has a valid seed
+  while(LotteryWinningTicket == 0)
+  {
+	LotteryWinningTicket = rand_int() % 100;
+  }
+
   /// Inifinite loop: runs as long as xv6 is running
-  for(;;){
-  
+  for(;;)
+  {
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    /// Checks all the processes in the system, and looks to see if they're in a runnable state
-    /// ptable.proc stores all the processes; it is limited to 64 processes in xv6
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     
-      // This is where it checks if the process state is runnable; if not, it just continues the loop
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      /// If it makes it to this line, has found a process with state runnable
-      proc = p;
-      /// Make sure we use the correct stack for this process
-      /// We need to make sure this is set up correctly before we can start executing this process
-      switchuvm(p);
-      /// Now set the process state to running -- this is the point where we decide to run this process
-      p->state = RUNNING;
-      // Now identify the matching entry in the system pstat table, and update it
-      int i;
-      for(i = 0; i < NPROC; i ++)
-      {
-      	if(syspstat->pid[i] == p->pid)
-      	{
-      		syspstat->chosen[i]++;
-      		syspstat->time[i] += 10;
-      		syspstat->charge[i] += (10 * syspstat->bid[i]);
-      		// Update the process name in the pstat table. This is such a cheap hack, but I'll remove it after debugging...
-      		safestrcpy(syspstat->pname[i], p->name, sizeof(p->name));
-      	}
-      }
-      //cprintf("Going to run %s [pid %d]\n", proc->name, proc->pid);
-      /// Now we have to move from the kernel context to the user content
-      /// This next call basically says to save the CPU scheduled context, and switch to the process context
-      /// This is done with assembly line code in swtch.S
-      /// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
-      /// Note: the cpu variable is a global in proc.h
-      /*
-      int c;
-      for(c = 0; c < ncpu; c ++)
-      {
-      	cprintf("CPU%d: cpus[c].id=%d, &scheduler=%d\n", c, cpus[c].id, (int)&cpus[c].scheduler);
-      }
-      */
-      //cprintf("The CPU we are about to swtch to: %d, &scheduler=%d\n", cpu->id, (int)&cpu->scheduler);
-      swtch(&cpu->scheduler, proc->context);
-      /// Tbe following line is what happens after it gets switched back via timer interrupt and yield
-      /// It gets called back in /kernel/trap.c
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
+    // Reset the lottery counter and highest bid tracker
+    LotteryCounter = 0;
+    HighestBid = 0;
+    
+    
+	// Lottery selection: iterate through all the processes in the system to determine which one wins the lottery
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+	{
+		// This is where it checks if the process state is runnable; if not, it just continues the loop
+		if(p->state == RUNNABLE)
+		{
+			LotteryCounter += p->percent;
+			//cprintf("LotteryCounter=%d\n", LotteryCounter);
+			if(LotteryCounter >= LotteryWinningTicket)
+			{
+				proc = p;
+				break;
+			}
+		}
+	}
+    
+    // Highest bid selection: if the lottery did not pick a process, choose the one with the highest bid
+    if(proc == NULL)
+    {
+    	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    	{
+      		if(p->state == RUNNABLE)
+      		{
+    			if(p->bid > HighestBid)
+    			{
+    				HighestBid = p->bid;
+    				proc = p;
+    			}
+    		}
+    	}
     }
+    
+    // If both the lottery and the highest bid selection failed, pick the process which has the fewest runs
+    if(proc == NULL)
+    {
+    	proc = ptable.proc;
+    }
+    /*
+    while(proc == NULL)
+    {
+    	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    	{
+      		if(p->state == RUNNABLE)
+      		{
+				if((rand_int() % 2) == 0)
+				{
+					proc = p;
+					break;
+				}
+    		}
+    	}
+    }
+    */
+	// Switch to chosen process.  It is the process's job
+	// to release ptable.lock and then reacquire it
+	// before jumping back to us.
+	/// If it makes it to this line, has found a process with state runnable
+	//proc = p;
+	
+	/// Make sure we use the correct stack for this process
+	/// We need to make sure this is set up correctly before we can start executing this process
+	switchuvm(proc); //switchuvm(p);
+	
+	/// Now set the process state to running -- this is the point where we decide to run this process
+	proc->state = RUNNING; //p->state = RUNNING;
+	
+	// Now identify the matching entry in the system pstat table, and update it
+	int i;
+	for(i = 0; i < NPROC; i ++)
+	{
+		if(syspstat->pid[i] == proc->pid)
+		{
+			syspstat->chosen[i]++;
+			syspstat->time[i] += 10;
+			syspstat->charge[i] += (10 * syspstat->bid[i]);
+			safestrcpy(syspstat->pname[i], proc->name, sizeof(proc->name));
+		}
+	}
+	
+	cprintf("Going to run %s [pid %d]\n", proc->name, proc->pid);
+	
+	/// Now we have to move from the kernel context to the user content
+	/// This next call basically says to save the CPU scheduled context, and switch to the process context
+	/// This is done with assembly line code in swtch.S
+	/// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
+	/// Note: the cpu variable is a global in proc.h
+	/*
+	int c;
+	for(c = 0; c < ncpu; c ++)
+	{
+		cprintf("CPU%d: cpus[c].id=%d, &scheduler=%d\n", c, cpus[c].id, (int)&cpus[c].scheduler);
+	}
+	*/
+	//cprintf("The CPU we are about to swtch to: %d, &scheduler=%d\n", cpu->id, (int)&cpu->scheduler);
+	swtch(&cpu->scheduler, proc->context);
+	
+	/// Tbe following line is what happens after it gets switched back via timer interrupt and yield
+	/// It gets called back in /kernel/trap.c
+	switchkvm();
+	
+	// Process is done running for now.
+	// It should have changed its p->state before coming back.
+	proc = 0;
+    
     release(&ptable.lock);
 
   }
@@ -395,7 +471,7 @@ forkret(void)
 {
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
-  
+
   // Return to "caller", actually trapret (see allocproc).
 }
 
@@ -514,5 +590,26 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+// Pseudo random number generator by Christian Pinder
+// http://www.christianpinder.com/articles/pseudo-random-number-generation/
+
+void set_rnd_seed(int new_seed)
+{
+    rnd_seed = new_seed;
+}
+
+int rand_int(void)
+{
+    int k1;
+    int ix = rnd_seed;
+	
+    k1 = ix / 127773;
+    ix = 16807 * (ix - k1 * 127773) - k1 * 2836;
+    if (ix < 0)
+        ix += 2147483647;
+    rnd_seed = ix;
+    return rnd_seed;
 }
 

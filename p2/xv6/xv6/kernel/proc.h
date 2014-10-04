@@ -74,6 +74,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  // The following three entries are duplicate data, also saved in the pstat table
+  // I've added them to the proc structure also to save lookup time (at the expense of memory)
+  int level;					// The level of this process (1 = reserved, 2 = spot)
+  int percent;					// Guaranteed percentage of CPU time for this process
+  int bid;						// Amount of $$ bid for this process, in $n per ms
 };
 
 // Process memory is laid out contiguously, low addresses first:
