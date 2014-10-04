@@ -1,4 +1,0 @@
-total 11
------w---- 1 coatsworth coatsworth    0 Sep 23 13:26 newfile
--rwxrwxr-x 1 coatsworth coatsworth 7837 Sep 23 13:26 test
--rw-r--r-- 1 coatsworth coatsworth 2400 Sep 23 13:26 test.c

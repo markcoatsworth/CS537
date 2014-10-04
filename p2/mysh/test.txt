@@ -1,5 +1,0 @@
-makefile
-mysh
-mysh.c
-test.txt
-"test"
