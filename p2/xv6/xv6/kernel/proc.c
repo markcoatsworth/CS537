@@ -87,6 +87,8 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
   
   p = allocproc();
+  cprintf("[initcode] p=%d\n", p);
+  cprintf("[initcode] locking ptable\n");
   acquire(&ptable.lock);
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
@@ -106,6 +108,7 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  cprintf("[initcode] releasing ptable\n");
   release(&ptable.lock);
 }
 
@@ -284,28 +287,159 @@ wait(void)
 
 /// Do not call the scheduler code! It should be allowed to work and run all on its own.
 
-void
-scheduler(void)
+void scheduler(void)
 {
-  int LotteryCounter;
-  int LotteryWinningTicket = 0;
-  int HighestBid;
-  struct proc *p;
+	int LotterySeed = 1; // we don't need a truly random seed
+	int LotteryCounter;
+	int LotteryWinningTicket = 0;
+	int HighestBid;
+	struct proc *p;
+	struct proc *HighestBidProcess = NULL;
+	struct proc *SelectedProcess = NULL;
+	struct proc *RandomProcess = NULL;
+	
+	// Seed the random number generator
+	set_rnd_seed(LotterySeed);
+	
+	// Allocate memory for the pstat process table, and initialize it all to 0
+	syspstat = (struct pstat*)kalloc();
+	memset(syspstat, 0, sizeof(struct pstat));
+	
+	// The random number generator takes some time to get seeded
+	// Do not start the scheduler until it returns real values
+	while(LotteryWinningTicket == 0)
+	{
+		LotteryWinningTicket = rand_int() % 100;
+	}
+	
+	// Start the main scheduler loop
+	for(;;)
+	{
   
-  // Seed the random number generator
-  set_rnd_seed((int)ticks);
+	    // Enable interrupts on this processor.
+	    sti();
+	
+	    // Loop over process table looking for process to run.
+	    acquire(&ptable.lock);
+	    
+	    // Reset everything
+	    LotteryCounter = 0;
+	    HighestBid = 0;
+	    HighestBidProcess = 0;
+	    RandomProcess = 0;
+	    SelectedProcess = 0;
+	    
+	    // Iterate through all processes in the system. Set the SelectedProcess pointer based on lottery scheduling policy.
+	    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+	    {
+	    	//cprintf("[scheduler] loop: p=%d, &ptable.proc[NPROC]=%d, p->state=%d\n", p, &ptable.proc[NPROC], p->state);
+	    
+			// This is where it checks if the process state is runnable; if not, it just continues the loop
+			if(p->state != RUNNABLE)
+				continue;
+				
+			// Keep track of the process with the highest bid. We'll need to know this later if nobody wins the lottery.
+			if(p->bid > HighestBid)
+			{
+				HighestBid = p->bid;
+				HighestBidProcess = p;
+			}
+
+			// We know this process is runnable. Now set the lottery counter.
+			LotteryCounter += p->percent;
+			
+			// If we get a lottery winner, set the proc and SelectedProcess pointers, then bail out of the for loop.
+			if(LotteryCounter >= LotteryWinningTicket)
+			{
+				proc = p;
+				SelectedProcess = p;
+				break;
+			}
+			
+			// Finally, (maybe) set the random process pointer to this process
+			//cprintf("[scheduler] Setting random process to %s [pid %d]\n", p->name, p->pid);			
+			if(RandomProcess == NULL)
+			{
+				RandomProcess = p;
+			}
+			else
+			{
+				if(rand_int() % 2 == 0)
+				{
+					RandomProcess = p;
+				}
+			}
+		}
+		
+		// If we got to the end of the process table without a process selected, pick the spot process with the highest big
+		if(SelectedProcess == NULL)
+		{
+			//cprintf("Nobody won the lottery, picking spot process with highest bid.\n");
+			if(HighestBidProcess != NULL)
+			{
+				proc = HighestBidProcess;
+				SelectedProcess = HighestBidProcess;				
+			}
+			else
+			{
+				//cprintf("Nobody had a highest bid, picking a random process.\n");
+				proc = RandomProcess;
+				SelectedProcess = RandomProcess;
+			}
+		}
+		
+		// Make sure that SelectedProcess is not null before proceeding!
+		// If it is still set to null, then no processes are ready and we start the scheduler loop over again. 
+		if(SelectedProcess != NULL)	
+		{	
+			//cprintf("[scheduler] p=%d, proc=%d, SelectedProcess=%d\n", p, proc, SelectedProcess);
+			cprintf("[scheduler] Going to run %s [pid %d] on cpu %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id);
+			
+			/// Make sure we use the correct stack for this process
+			/// We need to make sure this is set up correctly before we can start executing this process
+			switchuvm(SelectedProcess);
+			
+			/// Now set the process state to running -- this is the point where we decide to run this process
+			SelectedProcess->state = RUNNING;
+			
+			// Now identify the matching entry in the system pstat table, and update it
+			int i;
+			for(i = 0; i < NPROC; i ++)
+			{
+				if(syspstat->pid[i] == SelectedProcess->pid)
+				{
+					syspstat->chosen[i]++;
+					syspstat->time[i] += 10;
+					syspstat->charge[i] += (10 * syspstat->bid[i]);
+					// Update the process name in the pstat table. This is such a cheap hack, but I'll remove it after debugging...
+					safestrcpy(syspstat->pname[i], SelectedProcess->name, sizeof(SelectedProcess->name));
+				}
+			}
+			
+			/// Now we have to move from the kernel context to the user content
+			/// This next call basically says to save the CPU scheduled context, and switch to the process context
+			/// This is done with assembly line code in swtch.S
+			/// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
+			/// Note: the cpu variable is a global in proc.h
+			swtch(&cpu->scheduler, SelectedProcess->context);
+			
+			/// Tbe following line is what happens after it gets switched back via timer interrupt and yield
+			/// It gets called back in /kernel/trap.c
+			switchkvm();
+			
+			// Process is done running for now.
+			// It should have changed its p->state before coming back.
+			proc = 0;
+		}				
+			
+		// Release the lock on the process table
+		release(&ptable.lock);
+
+	}
+}
+
+/*
   
-  // Allocate memory for the pstat process table, and initialize it all to 0
-  syspstat = (struct pstat*)kalloc();
-  memset(syspstat, 0, sizeof(struct pstat));
-
-  // The random number generator takes some time to get seeded
-  // Do not start the scheduler until it has a valid seed
-  while(LotteryWinningTicket == 0)
-  {
-	LotteryWinningTicket = rand_int() % 100;
-  }
-
   /// Inifinite loop: runs as long as xv6 is running
   for(;;)
   {
@@ -357,23 +491,7 @@ scheduler(void)
     {
     	proc = ptable.proc;
     }
-    /*
-    while(proc == NULL)
-    {
-    	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    	{
-      		if(p->state == RUNNABLE)
-      		{
-				if((rand_int() % 2) == 0)
-				{
-					proc = p;
-					break;
-				}
-    		}
-    	}
-    }
-    */
-	// Switch to chosen process.  It is the process's job
+    	// Switch to chosen process.  It is the process's job
 	// to release ptable.lock and then reacquire it
 	// before jumping back to us.
 	/// If it makes it to this line, has found a process with state runnable
@@ -406,13 +524,7 @@ scheduler(void)
 	/// This is done with assembly line code in swtch.S
 	/// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
 	/// Note: the cpu variable is a global in proc.h
-	/*
-	int c;
-	for(c = 0; c < ncpu; c ++)
-	{
-		cprintf("CPU%d: cpus[c].id=%d, &scheduler=%d\n", c, cpus[c].id, (int)&cpus[c].scheduler);
-	}
-	*/
+
 	//cprintf("The CPU we are about to swtch to: %d, &scheduler=%d\n", cpu->id, (int)&cpu->scheduler);
 	swtch(&cpu->scheduler, proc->context);
 	
@@ -428,6 +540,7 @@ scheduler(void)
 
   }
 }
+*/
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
