@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "pstat.h"
 #include "spinlock.h"
+#include "fs.h"
+#include "file.h"
 
 struct {
   struct spinlock lock;
@@ -87,8 +89,6 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
   
   p = allocproc();
-  cprintf("[initcode] p=%d\n", p);
-  cprintf("[initcode] locking ptable\n");
   acquire(&ptable.lock);
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
@@ -108,7 +108,6 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-  cprintf("[initcode] releasing ptable\n");
   release(&ptable.lock);
 }
 
@@ -293,6 +292,7 @@ void scheduler(void)
 	int LotteryCounter;
 	int LotteryWinningTicket = 0;
 	int HighestBid;
+	int SchedulerCycles = 0;
 	struct proc *p;
 	struct proc *HighestBidProcess = NULL;
 	struct proc *SelectedProcess = NULL;
@@ -300,6 +300,9 @@ void scheduler(void)
 	
 	// Seed the random number generator
 	set_rnd_seed(LotterySeed);
+	
+	// Turn on statistics display for now. Users can turn it on with a system call.
+	DisplayStatistics = 0;
 	
 	// Allocate memory for the pstat process table, and initialize it all to 0
 	syspstat = (struct pstat*)kalloc();
@@ -315,6 +318,8 @@ void scheduler(void)
 	// Start the main scheduler loop
 	for(;;)
 	{
+  		// Increment the scheduler cycle count -- we'll use this later for generating statistics
+  		SchedulerCycles++;
   
 	    // Enable interrupts on this processor.
 	    sti();
@@ -328,6 +333,9 @@ void scheduler(void)
 	    HighestBidProcess = 0;
 	    RandomProcess = 0;
 	    SelectedProcess = 0;
+	    
+	    // Run the lottery for this round
+	    LotteryWinningTicket = rand_int() % 100;
 	    
 	    // Iterate through all processes in the system. Set the SelectedProcess pointer based on lottery scheduling policy.
 	    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -351,6 +359,7 @@ void scheduler(void)
 			// If we get a lottery winner, set the proc and SelectedProcess pointers, then bail out of the for loop.
 			if(LotteryCounter >= LotteryWinningTicket)
 			{
+				//cprintf("[scheduler] LotteryWinningTicket=%d, %s won the lottery on cpu %d\n", LotteryWinningTicket, p->name, cpu->id);
 				proc = p;
 				SelectedProcess = p;
 				break;
@@ -393,7 +402,7 @@ void scheduler(void)
 		if(SelectedProcess != NULL)	
 		{	
 			//cprintf("[scheduler] p=%d, proc=%d, SelectedProcess=%d\n", p, proc, SelectedProcess);
-			cprintf("[scheduler] Going to run %s [pid %d] on cpu %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id);
+			//cprintf("[scheduler] Going to run %s [pid %d] on cpu %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id);
 			
 			/// Make sure we use the correct stack for this process
 			/// We need to make sure this is set up correctly before we can start executing this process
@@ -409,10 +418,11 @@ void scheduler(void)
 				if(syspstat->pid[i] == SelectedProcess->pid)
 				{
 					syspstat->chosen[i]++;
-					syspstat->time[i] += 10;
 					syspstat->charge[i] += (10 * syspstat->bid[i]);
+					syspstat->time[i] += 10;
 					// Update the process name in the pstat table. This is such a cheap hack, but I'll remove it after debugging...
 					safestrcpy(syspstat->pname[i], SelectedProcess->name, sizeof(SelectedProcess->name));
+					//cprintf("[scheduler] cycles=%d, selected process=%s, chosen=%d\n", SchedulerCycles, syspstat->pname[i], syspstat->chosen[i]);					
 				}
 			}
 			
@@ -434,113 +444,30 @@ void scheduler(void)
 			
 		// Release the lock on the process table
 		release(&ptable.lock);
-
-	}
-}
-
-/*
-  
-  /// Inifinite loop: runs as long as xv6 is running
-  for(;;)
-  {
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    
-    // Reset the lottery counter and highest bid tracker
-    LotteryCounter = 0;
-    HighestBid = 0;
-    
-    
-	// Lottery selection: iterate through all the processes in the system to determine which one wins the lottery
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-	{
-		// This is where it checks if the process state is runnable; if not, it just continues the loop
-		if(p->state == RUNNABLE)
+		
+		// Finally, if scheduler statistics is turned on, display some stats every 1000000 scheduler cycles
+		// Since data is aggregated for all cpus, only display the results for CPU id=0. Otherwise we get lots of duplicate entries.
+		// Display data in a comma-delimited format that can easily be imported into a graphing tool
+		if(DisplayStatistics == 1 && cpu->id == 0)
 		{
-			LotteryCounter += p->percent;
-			//cprintf("LotteryCounter=%d\n", LotteryCounter);
-			if(LotteryCounter >= LotteryWinningTicket)
+			if((int)SchedulerCycles % 1000000 == 0)
 			{
-				proc = p;
-				break;
+				cprintf("\n%d", SchedulerCycles);
+
+				int i;
+				for(i = 0; i < NPROC; i ++)
+				{
+					if(syspstat->inuse[i] == 1)
+					{
+						cprintf(",%d", syspstat->chosen[i]);
+					}
+				}			
 			}
 		}
-	}
-    
-    // Highest bid selection: if the lottery did not pick a process, choose the one with the highest bid
-    if(proc == NULL)
-    {
-    	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    	{
-      		if(p->state == RUNNABLE)
-      		{
-    			if(p->bid > HighestBid)
-    			{
-    				HighestBid = p->bid;
-    				proc = p;
-    			}
-    		}
-    	}
-    }
-    
-    // If both the lottery and the highest bid selection failed, pick the process which has the fewest runs
-    if(proc == NULL)
-    {
-    	proc = ptable.proc;
-    }
-    	// Switch to chosen process.  It is the process's job
-	// to release ptable.lock and then reacquire it
-	// before jumping back to us.
-	/// If it makes it to this line, has found a process with state runnable
-	//proc = p;
-	
-	/// Make sure we use the correct stack for this process
-	/// We need to make sure this is set up correctly before we can start executing this process
-	switchuvm(proc); //switchuvm(p);
-	
-	/// Now set the process state to running -- this is the point where we decide to run this process
-	proc->state = RUNNING; //p->state = RUNNING;
-	
-	// Now identify the matching entry in the system pstat table, and update it
-	int i;
-	for(i = 0; i < NPROC; i ++)
-	{
-		if(syspstat->pid[i] == proc->pid)
-		{
-			syspstat->chosen[i]++;
-			syspstat->time[i] += 10;
-			syspstat->charge[i] += (10 * syspstat->bid[i]);
-			safestrcpy(syspstat->pname[i], proc->name, sizeof(proc->name));
-		}
-	}
-	
-	cprintf("Going to run %s [pid %d]\n", proc->name, proc->pid);
-	
-	/// Now we have to move from the kernel context to the user content
-	/// This next call basically says to save the CPU scheduled context, and switch to the process context
-	/// This is done with assembly line code in swtch.S
-	/// This is sort of the same as doing an exec. swtch never returns! It stops running this particular code, then switches over to the new process
-	/// Note: the cpu variable is a global in proc.h
 
-	//cprintf("The CPU we are about to swtch to: %d, &scheduler=%d\n", cpu->id, (int)&cpu->scheduler);
-	swtch(&cpu->scheduler, proc->context);
-	
-	/// Tbe following line is what happens after it gets switched back via timer interrupt and yield
-	/// It gets called back in /kernel/trap.c
-	switchkvm();
-	
-	// Process is done running for now.
-	// It should have changed its p->state before coming back.
-	proc = 0;
-    
-    release(&ptable.lock);
-
-  }
+	}
 }
-*/
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
@@ -703,6 +630,52 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+// Reserve time for a process
+int proc_reserve(int pid, int percent)
+{
+	// Declare variables
+	int MaxCpuTime = 100 * ncpu;
+	int ReservedCpuTime = 0;
+    struct proc* p;
+	
+    // First make sure this will not exceed maximum allowable cpu time. Only count against active processes!
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+	{
+    	if(p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING)
+    	{
+    		ReservedCpuTime += p->percent;
+	    }
+    }
+
+	// Reserve cpu time on the process
+    if((ReservedCpuTime + percent) <= MaxCpuTime)
+    {
+    	// Add reservation in the pstat table
+    	int i;
+    	for(i = 0; i < NPROC; i ++)
+    	{
+    		if(syspstat->pid[i] == pid)
+    		{
+		    	syspstat->level[i] = 1;
+		    	syspstat->percent[i] = percent;
+		    	syspstat->bid[i] = 100;   
+		    	break; 		
+    		}
+    	}
+    	
+    	// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
+		proc->level = 1;
+		proc->percent = percent;
+		proc->bid = 100;
+    }
+    else
+    {
+    	return 1;
+    }
+    
+    return 0;
 }
 
 // Pseudo random number generator by Christian Pinder
