@@ -97,9 +97,6 @@ int sys_reserve(void)
 {	
 	// Declare variables
 	int percent;
-	int MaxCpuTime = 100 * ncpu;
-	int ReservedCpuTime = 0;
-	int ThisProcessIndex = 0;
 	
 	// Set the value of percent from the stack
 	if(argint(0, &percent) < 0)
@@ -113,39 +110,9 @@ int sys_reserve(void)
     	return 1;
     }
     
-    // First make sure this will not exceed maximum allowable cpu time
-    int i;
-    for(i = 0; i < NPROC; i ++)
-    {
-    	if(syspstat->inuse[i] == 1)
-    	{
-    		ReservedCpuTime += syspstat->percent[i];
-    		if(proc->pid == syspstat->pid[i])
-	    	{
-	    		ThisProcessIndex = i;
-	    	}
-	    }
-    }
-
-	// Reserve cpu time on the process
-    if((ReservedCpuTime + percent) <= MaxCpuTime)
-    {
-    	// Add to the pstat table
-    	syspstat->level[ThisProcessIndex] = 1;
-    	syspstat->percent[ThisProcessIndex] = percent;
-    	syspstat->bid[ThisProcessIndex] = 100;
-    	// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
-		proc->level = 1;
-		proc->percent = percent;
-		proc->bid = 100;
-    }
-    else
-    {
-    	return 1;
-    }
-    
-    // If we made it this far then everything worked. Return success!
-    return 0;
+    // Reserve code needs to happen in proc.c which has access to the system process table. Run and return result.
+    int success = proc_reserve(proc->pid, percent);
+    return success;
 }
 
 // Mark a process for spot computing (level 2). 
@@ -220,4 +187,21 @@ int sys_getpinfo(void)
 	
 	// All done, exit
 	return 0;
+}
+
+// Turns process statistical output on or off.
+int sys_pstats(void)
+{
+	int display;
+	
+	// Retrieve the memory location of display from the stack
+	if(argint(0, &display) < 0)
+	{
+    	return -1;
+    }
+    
+    // Turn statistics on or off
+    DisplayStatistics = display;
+    
+    return 0;
 }

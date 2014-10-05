@@ -26,5 +26,6 @@
 #define SYS_reserve 22
 #define SYS_spot   23
 #define SYS_getpinfo 24
+#define SYS_pstats 25
 
 #endif // _SYSCALL_H_

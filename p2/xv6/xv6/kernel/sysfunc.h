@@ -26,5 +26,6 @@ int sys_uptime(void);
 int sys_reserve(void);
 int sys_spot(void);
 int sys_getpinfo(void);
+int sys_pstats(void);
 
 #endif // _SYSFUNC_H_

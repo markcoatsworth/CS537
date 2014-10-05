@@ -100,6 +100,7 @@ int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, char*, int);
 
 // proc.c
+int				DisplayStatistics;
 struct proc*    copyproc(struct proc*);
 void            exit(void);
 int             fork(void);
@@ -114,6 +115,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int 			proc_reserve(int, int);
 void 			set_rnd_seed(int);
 int 			rand_int(void);
 

@@ -1,6 +1,8 @@
 
 # user programs
 USER_PROGS := \
+	bid10\
+	bid50\
 	cat\
 	echo\
 	forktest\
@@ -11,15 +13,17 @@ USER_PROGS := \
 	ls\
 	mkdir\
 	pstat\
+	pstats\
+	reserve40\
+	reserve80\
 	rm\
 	sh\
 	stressfs\
 	tester\
 	usertests\
 	wc\
-	zombie\
-	waste40\
-	waste80
+	zombie
+
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 

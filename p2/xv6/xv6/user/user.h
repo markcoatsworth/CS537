@@ -29,6 +29,7 @@ int uptime(void);
 int reserve(int);
 int spot(int);
 int getpinfo(struct pstat*);
+int pstats(int);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);
