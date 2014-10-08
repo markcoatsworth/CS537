@@ -18,6 +18,8 @@ static struct proc *initproc;
 
 static int rnd_seed;
 
+int SchedulerCycles = 0;
+
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -292,7 +294,7 @@ void scheduler(void)
 	int LotteryCounter;
 	int LotteryWinningTicket = 0;
 	int HighestBid;
-	int SchedulerCycles = 0;
+
 	struct proc *p;
 	struct proc *HighestBidProcess = NULL;
 	struct proc *SelectedProcess = NULL;
@@ -340,24 +342,31 @@ void scheduler(void)
 	    // Iterate through all processes in the system. Set the SelectedProcess pointer based on lottery scheduling policy.
 	    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
 	    {
-	    	//cprintf("[scheduler] loop: p=%d, &ptable.proc[NPROC]=%d, p->state=%d\n", p, &ptable.proc[NPROC], p->state);
+	    	/*
+	    	if(DisplayStatistics == 1)
+	    	{
+	    		cprintf("[scheduler] loop: cpu=%d, p=%d, name=%s, percent=%d, p->state=%d, LotteryWinningTicket=%d\n", cpu->id, p, p->name, p->percent, p->state, LotteryWinningTicket);
+	    	}
+	    	*/
 	    
 			// This is where it checks if the process state is runnable; if not, it just continues the loop
 			if(p->state != RUNNABLE)
 				continue;
 				
 			// Keep track of the process with the highest bid. We'll need to know this later if nobody wins the lottery.
+			// If multiple processes tie for highest bid, it gets awarded to the first one in the process table
+			// which also happens to be the first process started.
 			if(p->bid > HighestBid)
 			{
 				HighestBid = p->bid;
 				HighestBidProcess = p;
 			}
 
-			// We know this process is runnable. Now set the lottery counter.
-			LotteryCounter += p->percent;
+			// We know this process is runnable. Now set the lottery counter. Assume reserved time is shared between all cpus.
+			LotteryCounter += (p->percent / ncpu);
 			
 			// If we get a lottery winner, set the proc and SelectedProcess pointers, then bail out of the for loop.
-			if(LotteryCounter >= LotteryWinningTicket)
+			if(LotteryCounter > LotteryWinningTicket)
 			{
 				//cprintf("[scheduler] LotteryWinningTicket=%d, %s won the lottery on cpu %d\n", LotteryWinningTicket, p->name, cpu->id);
 				proc = p;
@@ -365,8 +374,7 @@ void scheduler(void)
 				break;
 			}
 			
-			// Finally, (maybe) set the random process pointer to this process
-			//cprintf("[scheduler] Setting random process to %s [pid %d]\n", p->name, p->pid);			
+			// Finally, set up a random pointer in case nothing gets selected via lottery or highest bid
 			if(RandomProcess == NULL)
 			{
 				RandomProcess = p;
@@ -402,7 +410,7 @@ void scheduler(void)
 		if(SelectedProcess != NULL)	
 		{	
 			//cprintf("[scheduler] p=%d, proc=%d, SelectedProcess=%d\n", p, proc, SelectedProcess);
-			//cprintf("[scheduler] Going to run %s [pid %d] on cpu %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id);
+			cprintf("[scheduler] Going to run %s [pid %d] on cpu %d! Scheduler cycle %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id, ScheduleCycles);
 			
 			/// Make sure we use the correct stack for this process
 			/// We need to make sure this is set up correctly before we can start executing this process
@@ -448,9 +456,9 @@ void scheduler(void)
 		// Finally, if scheduler statistics is turned on, display some stats every 1000000 scheduler cycles
 		// Since data is aggregated for all cpus, only display the results for CPU id=0. Otherwise we get lots of duplicate entries.
 		// Display data in a comma-delimited format that can easily be imported into a graphing tool
-		if(DisplayStatistics == 1 && cpu->id == 0)
+		if(DisplayStatistics == 1)
 		{
-			if((int)SchedulerCycles % 1000000 == 0)
+			if((int)SchedulerCycles % 100000 == 0)
 			{
 				cprintf("\n%d", SchedulerCycles);
 
@@ -464,7 +472,6 @@ void scheduler(void)
 				}			
 			}
 		}
-
 	}
 }
 
