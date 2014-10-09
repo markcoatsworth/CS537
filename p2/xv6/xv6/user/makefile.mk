@@ -1,8 +1,6 @@
 
 # user programs
 USER_PROGS := \
-	bid10\
-	bid50\
 	cat\
 	echo\
 	forktest\
@@ -14,10 +12,10 @@ USER_PROGS := \
 	mkdir\
 	pstat\
 	pstats\
-	reserve40\
-	reserve80\
+	reserve\
 	rm\
 	sh\
+	spotbid\
 	stressfs\
 	tester\
 	usertests\

@@ -101,13 +101,13 @@ int sys_reserve(void)
 	// Set the value of percent from the stack
 	if(argint(0, &percent) < 0)
 	{
-    	return 1;
+    	return -1;
     }
     
     // Process fails if percent is not between 0 and 100
     if(percent < 0 || percent > 100)
     {
-    	return 1;
+    	return -1;
     }
     
     // Reserve code needs to happen in proc.c which has access to the system process table. Run and return result.

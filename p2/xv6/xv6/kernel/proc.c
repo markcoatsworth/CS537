@@ -336,19 +336,12 @@ void scheduler(void)
 	    RandomProcess = 0;
 	    SelectedProcess = 0;
 	    
-	    // Run the lottery for this round
-	    LotteryWinningTicket = rand_int() % 100;
+	    // Pick the lottery ticket for this round.
+	    LotteryWinningTicket = (rand_int() % 100) * ncpu;
 	    
 	    // Iterate through all processes in the system. Set the SelectedProcess pointer based on lottery scheduling policy.
 	    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
 	    {
-	    	/*
-	    	if(DisplayStatistics == 1)
-	    	{
-	    		cprintf("[scheduler] loop: cpu=%d, p=%d, name=%s, percent=%d, p->state=%d, LotteryWinningTicket=%d\n", cpu->id, p, p->name, p->percent, p->state, LotteryWinningTicket);
-	    	}
-	    	*/
-	    
 			// This is where it checks if the process state is runnable; if not, it just continues the loop
 			if(p->state != RUNNABLE)
 				continue;
@@ -363,7 +356,7 @@ void scheduler(void)
 			}
 
 			// We know this process is runnable. Now set the lottery counter. Assume reserved time is shared between all cpus.
-			LotteryCounter += (p->percent / ncpu);
+			LotteryCounter += p->percent;
 			
 			// If we get a lottery winner, set the proc and SelectedProcess pointers, then bail out of the for loop.
 			if(LotteryCounter > LotteryWinningTicket)
@@ -409,8 +402,7 @@ void scheduler(void)
 		// If it is still set to null, then no processes are ready and we start the scheduler loop over again. 
 		if(SelectedProcess != NULL)	
 		{	
-			//cprintf("[scheduler] p=%d, proc=%d, SelectedProcess=%d\n", p, proc, SelectedProcess);
-			cprintf("[scheduler] Going to run %s [pid %d] on cpu %d! Scheduler cycle %d\n", SelectedProcess->name, SelectedProcess->pid, cpu->id, ScheduleCycles);
+			//cprintf("[scheduler] Going to run %s [pid %d] on cpu %d!\n", SelectedProcess->name, SelectedProcess->pid, cpu->id);
 			
 			/// Make sure we use the correct stack for this process
 			/// We need to make sure this is set up correctly before we can start executing this process
@@ -448,7 +440,7 @@ void scheduler(void)
 			// Process is done running for now.
 			// It should have changed its p->state before coming back.
 			proc = 0;
-		}				
+		}
 			
 		// Release the lock on the process table
 		release(&ptable.lock);
@@ -679,7 +671,7 @@ int proc_reserve(int pid, int percent)
     }
     else
     {
-    	return 1;
+    	return -1;
     }
     
     return 0;
