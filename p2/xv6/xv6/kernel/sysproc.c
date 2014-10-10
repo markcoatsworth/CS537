@@ -140,8 +140,8 @@ int sys_spot(void)
     {
     	if(proc->pid == syspstat->pid[i])
     	{
-    		syspstat->level[i] = 2;
-    		syspstat->bid[i] = bid;
+    		//syspstat->level[i] = 2;
+    		//syspstat->bid[i] = bid;
     		// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
 			proc->level = 2;
 			proc->bid = bid;
@@ -176,10 +176,10 @@ int sys_getpinfo(void)
 	{
 		userpstat->inuse[i] 	= syspstat->inuse[i];
 		userpstat->pid[i] 		= syspstat->pid[i];
-		strncpy(userpstat->pname[i], syspstat->pname[i], 16);
-		userpstat->level[i]		= syspstat->level[i];
-	  	userpstat->percent[i]	= syspstat->percent[i];
-	  	userpstat->bid[i]		= syspstat->bid[i];
+		//strncpy(userpstat->pname[i], syspstat->pname[i], 16);
+		//userpstat->level[i]		= syspstat->level[i];
+	  	//userpstat->percent[i]	= syspstat->percent[i];
+	  	//userpstat->bid[i]		= syspstat->bid[i];
 		userpstat->chosen[i] 	= syspstat->chosen[i];
 		userpstat->time[i] 		= syspstat->time[i];
 		userpstat->charge[i] 	= syspstat->charge[i];

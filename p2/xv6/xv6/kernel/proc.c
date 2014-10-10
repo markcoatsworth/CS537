@@ -176,10 +176,10 @@ fork(void)
   	{
   	  syspstat->inuse[i] 	= 1;
   	  syspstat->pid[i] 		= pid;
-  	  safestrcpy(syspstat->pname[i], np->name, sizeof(np->name));
-	  syspstat->level[i]	= 2;
-	  syspstat->percent[i]	= 0;
-	  syspstat->bid[i]		= 0;
+  	  //safestrcpy(syspstat->pname[i], np->name, sizeof(np->name));
+	  //syspstat->level[i]	= 2;
+	  //syspstat->percent[i]	= 0;
+	  //syspstat->bid[i]		= 0;
   	  syspstat->chosen[i] 	= 0;
   	  syspstat->time[i]		= 0;
   	  syspstat->charge[i] 	= 0;
@@ -418,11 +418,8 @@ void scheduler(void)
 				if(syspstat->pid[i] == SelectedProcess->pid)
 				{
 					syspstat->chosen[i]++;
-					syspstat->charge[i] += (10 * syspstat->bid[i]);
-					syspstat->time[i] += 10;
-					// Update the process name in the pstat table. This is such a cheap hack, but I'll remove it after debugging...
-					safestrcpy(syspstat->pname[i], SelectedProcess->name, sizeof(SelectedProcess->name));
-					//cprintf("[scheduler] cycles=%d, selected process=%s, chosen=%d\n", SchedulerCycles, syspstat->pname[i], syspstat->chosen[i]);					
+					syspstat->time[i] += 10;					
+					syspstat->charge[i] = (syspstat->time[i] * SelectedProcess->bid) / 1000;
 				}
 			}
 			
@@ -651,20 +648,7 @@ int proc_reserve(int pid, int percent)
 	// Reserve cpu time on the process
     if((ReservedCpuTime + percent) <= MaxCpuTime)
     {
-    	// Add reservation in the pstat table
-    	int i;
-    	for(i = 0; i < NPROC; i ++)
-    	{
-    		if(syspstat->pid[i] == pid)
-    		{
-		    	syspstat->level[i] = 1;
-		    	syspstat->percent[i] = percent;
-		    	syspstat->bid[i] = 100;   
-		    	break; 		
-    		}
-    	}
-    	
-    	// Also add to the main process table (to save lookup time in the scheduler, at the expense of memory)
+    	// Add to the main process table (to save lookup time in the scheduler, at the expense of memory)
 		proc->level = 1;
 		proc->percent = percent;
 		proc->bid = 100;
