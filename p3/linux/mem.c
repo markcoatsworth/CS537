@@ -9,7 +9,7 @@
 
 typedef struct __AllocNode {
 	int Size;
-	struct __AllocNode *Next;
+	struct __AllocNode* Next;
 } AllocNode;
 
 AllocNode* AllocListHead;
@@ -63,8 +63,8 @@ void* Mem_Alloc(int size)
 {
 	// Declare variables
 	AllocNode* TargetNode;
-	AllocNode* TrailingNode;
-	AllocNode* ThisNode;
+	//AllocNode* TrailingNode;
+	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
 	
 	// Make sure allocation size is a multiple of 8. Allocate extra memory if necessary.
@@ -72,19 +72,18 @@ void* Mem_Alloc(int size)
 	{
 		AllocSize += 8 - (AllocSize % 8);
 	}
-	return NULL;
 	
 	// Traverse the allocation list, determine the best place for new memory to go
 	while(ThisNode != NULL)
 	{
 		// If this node matches the allocation size exactly, use it, and break out of the loop
-		if(ThisNode.Size == AllocSize)
+		if(ThisNode->Size == AllocSize)
 		{
 			TargetNode = ThisNode;
 			break;
 		}
-		// If this node is larger than the allocation size, temporarily select it, although we may find a better option
-		else if(ThisNode.Size > AllocSize)
+		// If this node is larger than the allocation size, temporarily select it, although we may still find an exact match
+		else if(ThisNode->Size > AllocSize)
 		{
 			TargetNode = ThisNode;
 		}
@@ -92,7 +91,32 @@ void* Mem_Alloc(int size)
 		ThisNode = ThisNode->Next;
 	}
 	
-	// Now that we have identified a target node, break it up, and create a new allocation list entry
+	// If TargetNode is still NULL, then we did not find a free space big enough; return null
+	if(TargetNode == NULL)
+	{
+		return NULL;
+	}
+	
+	// If the target node is the exact same size as the requested allocation size
+	printf("[Mem_Alloc] Found target node at location %p, sizeof(AllocNode)=%zu\n", (void*)TargetNode, sizeof(AllocNode));
+	if(TargetNode->Size == AllocSize)
+	{
+		return NULL;
+	}
+	// If the target node is larger than the requested allocation size, we need to break it up
+	else if(TargetNode->Size > AllocSize)
+	{
+		AllocNode *NewNode;
+		NewNode = TargetNode + sizeof(AllocNode) + AllocSize;
+		NewNode->Size = TargetNode->Size - sizeof(AllocNode) - AllocSize;
+		NewNode->Next = NULL;
+		TargetNode->Size = AllocSize;
+		TargetNode->Next = NewNode;
+		return (void *)TargetNode;
+	}
+	
+	return NULL;
+	
 }
 
 int Mem_Free(void* ptr)
