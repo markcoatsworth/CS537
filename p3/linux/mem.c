@@ -8,6 +8,7 @@
 #include "mem.h"
 
 typedef struct __AllocNode {
+	int IsAllocated;
 	int Size;
 	struct __AllocNode* Next;
 } AllocNode;
@@ -47,8 +48,9 @@ int Mem_Init(int size)
 	
 	// Now, point the global allocation head list pointer to the region we just allocated
 	AllocNode* HeadNode = (AllocNode*) ptr;
-	HeadNode->Next = NULL;
+	HeadNode->IsAllocated = 0;
 	HeadNode->Size = InitSize - sizeof(AllocNode);
+	HeadNode->Next = NULL;	
 	AllocListHead = HeadNode;
 	
 	// All done! Return
@@ -58,13 +60,13 @@ int Mem_Init(int size)
 
 /*
  *	Allocate the memory requested by the size parameter.
- *	Set the last pointer in the allocation list to the size of bytes requested
- *	Then adjust other nodes in the allocation list accordingly
+ *	Find a block of free memory (ideally one which is exactly the requested size) and return a pointer
  */
 void* Mem_Alloc(int size)
 {
 	// Declare variables
 	AllocNode* NewNode;
+	AllocNode* TargetNode;
 	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
 	
@@ -74,36 +76,87 @@ void* Mem_Alloc(int size)
 		AllocSize += 8 - (AllocSize % 8);
 	}
 	
-	// Determine the last node in the list (with Next pointing to NULL)
-	// This is the node which references the free space in our memory
-	while(ThisNode->Next != NULL)
+	// Traverse the allocation list, determine the best place for new memory to go
+	while(ThisNode != NULL)
 	{
+		// If this node matches the allocation size exactly, use it, and break out of the loop
+		if(ThisNode->IsAllocated == 0 && ThisNode->Size == AllocSize)
+		{
+			TargetNode = ThisNode;
+			break;
+		}
+		// If this node is larger than the allocation size, temporarily select it, although we may still find an exact match
+		else if(ThisNode->IsAllocated == 0 && ThisNode->Size > AllocSize)
+		{
+			TargetNode = ThisNode;
+		}
+		
 		ThisNode = ThisNode->Next;
 	}
+
 	
 	// Make sure there is still enough space for the space requested; if not, return NULL
-	if(ThisNode->Size < (AllocSize + sizeof(AllocNode)))
+	if(TargetNode->Size < (AllocSize + sizeof(AllocNode)))
 	{
 		return NULL;
 	}
 	
-	// Create a new data structure and store it in the free memory space	
-	// Bug: following line adds 256 + 256 instead of 16 + 16 (which it's supposed to). So the location of NewNode is incorrect. Everything else seems okay though.
-	NewNode = ThisNode + sizeof(AllocNode)/16 + AllocSize/16;
-	NewNode->Size = ThisNode->Size - sizeof(AllocNode) - AllocSize;
-	NewNode->Next = NULL;
-	ThisNode->Size = AllocSize;
-	ThisNode->Next = NewNode;
-
-	//printf("[Mem_Alloc] ThisNode @ %p, NewNode @ %p\n", (void*)ThisNode, (void*)NewNode);
+	// If we found an exact match, then set it to allocated and return it
+	if(TargetNode->Size == AllocSize)
+	{
+		TargetNode->IsAllocated = 1;
+	}
+	// If we found a node that was bigger, then split it
+	else
+	{
+		NewNode = TargetNode + sizeof(AllocNode)/16 + AllocSize/16;
+		NewNode->IsAllocated = 0;
+		NewNode->Size = TargetNode->Size - sizeof(AllocNode) - AllocSize;
+		NewNode->Next = NULL;
+		TargetNode->IsAllocated = 1;
+		TargetNode->Size = AllocSize;
+		TargetNode->Next = NewNode;
+	}
 	
-	// All done! Return the address of the allocated memory
-	// (which is the location of the new node pointer, plus the space reserved for the node structure)
-	return (void *)(ThisNode + sizeof(AllocNode)/16);
+	//printf("[Mem_Alloc] TargetNode @ %p, NewNode @ %p\n", (void*)ThisNode, (void*)NewNode);
+	
+	// All done! Return the memory location address of the allocated memory
+	// (which is the location of the ThisNode pointer, plus the space reserved for the node structure)
+	return (void *)(TargetNode + sizeof(AllocNode)/16);
 }
 
 int Mem_Free(void* ptr)
 {
+	// Declare variables
+	AllocNode* ThisNode = AllocListHead;
+	//int FreedNodeSize = 0;
+	
+	// First, check that ptr is valid
+	if(ptr == NULL)
+	{
+		return -1;
+	}
+	
+	// Determine which node structure has allocated the memory pointed to by ptr
+	while(ThisNode != NULL)
+	{
+		if((ThisNode + sizeof(AllocNode)/16) == ptr)
+		{
+			break;
+		}
+		ThisNode = ThisNode->Next;
+	}
+	
+	// If ThisNode->Next now points to null, then nothing in our list matched the parameter. Exit now.
+	if(ThisNode == NULL)
+	{
+		return -1;
+	}
+	
+	// TO deallocate ThisNode, simply set its IsAllocated value to 0
+	ThisNode->IsAllocated = 0;
+	
+	
 	return 0;
 }
 
@@ -137,7 +190,7 @@ void Mem_Dump()
 	while(ThisNode != NULL)
 	{
 		//printf("Address: %p, Size: %d\n", (void*)ThisNode + sizeof(AllocNode), ThisNode->Size);
-		printf("[Mem_Dump] Address: %zu [%p], Size: %d\n", (long unsigned int)ThisNode + sizeof(AllocNode), (void*)ThisNode + sizeof(AllocNode), ThisNode->Size);
+		printf("[Mem_Dump] Address: %zu [%p], Size: %d, IsAllocated: %d\n", (long unsigned int)ThisNode + sizeof(AllocNode), (void*)ThisNode + sizeof(AllocNode), ThisNode->Size, ThisNode->IsAllocated);
 		ThisNode = ThisNode->Next;
 	}
 }
