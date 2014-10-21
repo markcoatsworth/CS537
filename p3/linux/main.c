@@ -16,10 +16,14 @@ int main()
 	char *TestString3;
 	
 	TestString1 = (char*)Mem_Alloc(16);
+	printf("After TestString1, memory still available: %d\n", Mem_Available());
 	TestString2 = (char*)Mem_Alloc(64); 
+	printf("After TestString2, memory still available: %d\n", Mem_Available());
 	TestString3 = (char*)Mem_Alloc(256);
+	printf("After TestString3, memory still available: %d\n", Mem_Available());
 	
 	// Print out the first eight bytes pointed to by TestString
+	/*
 	printf("TestString1: ");
 	int i;
 	for(i = 0; i < 16; i ++)
@@ -41,6 +45,7 @@ int main()
 		printf("%d\t", TestString3[i]);
 	}
 	printf("\n");
+	*/
 	
 	// Display memory dump
 	Mem_Dump();

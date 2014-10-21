@@ -57,13 +57,14 @@ int Mem_Init(int size)
 }
 
 /*
- *	Allocate the memory requested by the calling funciton
+ *	Allocate the memory requested by the size parameter.
+ *	Create a new AllocNode item, add it to the allocation list, leave the size of bytes requested after it
+ *	Then adjust other nodes in the allocation list accordingly
  */
 void* Mem_Alloc(int size)
 {
 	// Declare variables
 	AllocNode* TargetNode;
-	//AllocNode* TrailingNode;
 	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
 	
@@ -98,7 +99,7 @@ void* Mem_Alloc(int size)
 	}
 	
 	// If the target node is the exact same size as the requested allocation size
-	printf("[Mem_Alloc] Found target node at location %p, sizeof(AllocNode)=%zu\n", (void*)TargetNode, sizeof(AllocNode));
+	//printf("[Mem_Alloc] Found target node at location %zu [%p]\n", (long unsigned int)TargetNode, (void*)TargetNode);
 	if(TargetNode->Size == AllocSize)
 	{
 		return NULL;
@@ -107,7 +108,10 @@ void* Mem_Alloc(int size)
 	else if(TargetNode->Size > AllocSize)
 	{
 		AllocNode *NewNode;
+		// Bug: following line adds 256 + 256 instead of 16 + 16 (which it's supposed to)
+		// So the location of NewNode is incorrect. Everything else seems okay though.
 		NewNode = TargetNode + sizeof(AllocNode) + AllocSize;
+		// printf("[Mem_Alloc] NewNode goes into %zu + %zu + %d = %zu\n", (long unsigned int)TargetNode, sizeof(AllocNode), AllocSize, (long unsigned int)NewNode);
 		NewNode->Size = TargetNode->Size - sizeof(AllocNode) - AllocSize;
 		NewNode->Next = NULL;
 		TargetNode->Size = AllocSize;
@@ -124,9 +128,22 @@ int Mem_Free(void* ptr)
 	return 0;
 }
 
+/*
+ *	Return number of bytes that can be used by future calls to Mem_Alloc
+ *	Since we assume that only the last node in the AllocList (with Next pointing to NULL) contains
+ *	memory that can still be allocated, return the Size value of this node.
+ */
 int Mem_Available()
 {
-	return 0;
+	// Set the ThisNode pointer to the last node in the list
+	AllocNode* ThisNode = AllocListHead;
+	while(ThisNode->Next != NULL)
+	{
+		ThisNode = ThisNode->Next;
+	}
+	
+	// Now that ThisNode is pointing at the last node in the list, return its size
+	return ThisNode->Size;
 }
 
 /*
@@ -135,9 +152,13 @@ int Mem_Available()
 void Mem_Dump()
 {
 	AllocNode* ThisNode = AllocListHead;
+	//printf("[Mem_Dump] sizeof(int)=%zu\n", sizeof(int));
+	//printf("[Mem_Dump] sizeof(AllocNode)=%zu\n", sizeof(AllocNode));
+	//printf("[Mem_Dump] sizeof(*AllocNode)=%zu\n", sizeof(AllocNode*));
 	while(ThisNode != NULL)
 	{
-		printf("Address: %p, Size: %d\n", (void*)ThisNode + sizeof(AllocNode), ThisNode->Size);
+		//printf("Address: %p, Size: %d\n", (void*)ThisNode + sizeof(AllocNode), ThisNode->Size);
+		printf("[Mem_Dump] Address: %zu [%p], Size: %d\n", (long unsigned int)ThisNode + sizeof(AllocNode), (void*)ThisNode + sizeof(AllocNode), ThisNode->Size);
 		ThisNode = ThisNode->Next;
 	}
 }
