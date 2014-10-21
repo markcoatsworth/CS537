@@ -18,6 +18,8 @@
 #define T_SEGNP         11      // segment not present
 #define T_STACK         12      // stack exception
 #define T_GPFLT         13      // general protection fault
+/// The following page fault does not get handled appropriately
+/// We'll need to catch it and handle it appropriately
 #define T_PGFLT         14      // page fault
 // #define T_RES        15      // reserved
 #define T_FPERR         16      // floating point error

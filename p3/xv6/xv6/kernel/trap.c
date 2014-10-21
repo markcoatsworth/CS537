@@ -34,6 +34,18 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+	if(tf->trapno == T_PGFLT)
+	{
+		cprintf("We got a page fault at address %x\n", rcr2());
+		/// Add code to gracefully handle this
+		/// Check what address it is faulting on
+		/// And make sure that you allocate the page
+		/// Don't allocate the page if it's not near the stack
+		/// If we're segfaulting because we're trying to access a totally bogus page (ie 0) then still page fault
+		/// Should only allocate if we're getting the page fault close to the end of the stack
+		/// Also keep in mind, the stack can grow and ocllide with the heap
+		/// So we should allocate a "null" page between the stack and heap. We always want to have one null page between them.
+	}
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
@@ -84,6 +96,7 @@ trap(struct trapframe *tf)
       panic("trap");
     }
     // In user space, assume process misbehaved.
+	/// This part is extremely important to us.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",
             proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, 
