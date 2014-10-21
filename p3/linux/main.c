@@ -14,13 +14,19 @@ int main()
 	char *TestString1;
 	char *TestString2;
 	char *TestString3;
+	char *TestString4;
 	
 	TestString1 = (char*)Mem_Alloc(16);
-	printf("After TestString1, memory still available: %d\n", Mem_Available());
+	//printf("TestString1 lives at %p, memory still available: %d\n", (void*)TestString1, Mem_Available());
 	TestString2 = (char*)Mem_Alloc(64); 
-	printf("After TestString2, memory still available: %d\n", Mem_Available());
+	//printf("TestString2 lives at %p, memory still available: %d\n", (void*)TestString2, Mem_Available());
 	TestString3 = (char*)Mem_Alloc(256);
-	printf("After TestString3, memory still available: %d\n", Mem_Available());
+	//printf("TestString3 lives at %p, memory still available: %d\n", (void*)TestString3, Mem_Available());
+	TestString4 = (char*)Mem_Alloc(7400);
+	if(TestString4 == NULL)
+	{
+		printf("Could not allocate TestString4, not enough memory\n");
+	}
 	
 	// Print out the first eight bytes pointed to by TestString
 	/*

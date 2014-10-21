@@ -58,13 +58,13 @@ int Mem_Init(int size)
 
 /*
  *	Allocate the memory requested by the size parameter.
- *	Create a new AllocNode item, add it to the allocation list, leave the size of bytes requested after it
+ *	Set the last pointer in the allocation list to the size of bytes requested
  *	Then adjust other nodes in the allocation list accordingly
  */
 void* Mem_Alloc(int size)
 {
 	// Declare variables
-	AllocNode* TargetNode;
+	AllocNode* NewNode;
 	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
 	
@@ -74,53 +74,32 @@ void* Mem_Alloc(int size)
 		AllocSize += 8 - (AllocSize % 8);
 	}
 	
-	// Traverse the allocation list, determine the best place for new memory to go
-	while(ThisNode != NULL)
+	// Determine the last node in the list (with Next pointing to NULL)
+	// This is the node which references the free space in our memory
+	while(ThisNode->Next != NULL)
 	{
-		// If this node matches the allocation size exactly, use it, and break out of the loop
-		if(ThisNode->Size == AllocSize)
-		{
-			TargetNode = ThisNode;
-			break;
-		}
-		// If this node is larger than the allocation size, temporarily select it, although we may still find an exact match
-		else if(ThisNode->Size > AllocSize)
-		{
-			TargetNode = ThisNode;
-		}
-		
 		ThisNode = ThisNode->Next;
 	}
 	
-	// If TargetNode is still NULL, then we did not find a free space big enough; return null
-	if(TargetNode == NULL)
+	// Make sure there is still enough space for the space requested; if not, return NULL
+	if(ThisNode->Size < (AllocSize + sizeof(AllocNode)))
 	{
 		return NULL;
 	}
 	
-	// If the target node is the exact same size as the requested allocation size
-	//printf("[Mem_Alloc] Found target node at location %zu [%p]\n", (long unsigned int)TargetNode, (void*)TargetNode);
-	if(TargetNode->Size == AllocSize)
-	{
-		return NULL;
-	}
-	// If the target node is larger than the requested allocation size, we need to break it up
-	else if(TargetNode->Size > AllocSize)
-	{
-		AllocNode *NewNode;
-		// Bug: following line adds 256 + 256 instead of 16 + 16 (which it's supposed to)
-		// So the location of NewNode is incorrect. Everything else seems okay though.
-		NewNode = TargetNode + sizeof(AllocNode) + AllocSize;
-		// printf("[Mem_Alloc] NewNode goes into %zu + %zu + %d = %zu\n", (long unsigned int)TargetNode, sizeof(AllocNode), AllocSize, (long unsigned int)NewNode);
-		NewNode->Size = TargetNode->Size - sizeof(AllocNode) - AllocSize;
-		NewNode->Next = NULL;
-		TargetNode->Size = AllocSize;
-		TargetNode->Next = NewNode;
-		return (void *)TargetNode;
-	}
+	// Create a new data structure and store it in the free memory space	
+	// Bug: following line adds 256 + 256 instead of 16 + 16 (which it's supposed to). So the location of NewNode is incorrect. Everything else seems okay though.
+	NewNode = ThisNode + sizeof(AllocNode)/16 + AllocSize/16;
+	NewNode->Size = ThisNode->Size - sizeof(AllocNode) - AllocSize;
+	NewNode->Next = NULL;
+	ThisNode->Size = AllocSize;
+	ThisNode->Next = NewNode;
+
+	//printf("[Mem_Alloc] ThisNode @ %p, NewNode @ %p\n", (void*)ThisNode, (void*)NewNode);
 	
-	return NULL;
-	
+	// All done! Return the address of the allocated memory
+	// (which is the location of the new node pointer, plus the space reserved for the node structure)
+	return (void *)(ThisNode + sizeof(AllocNode)/16);
 }
 
 int Mem_Free(void* ptr)
