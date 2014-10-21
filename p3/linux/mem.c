@@ -112,7 +112,7 @@ void* Mem_Alloc(int size)
 		NewNode = TargetNode + sizeof(AllocNode)/16 + AllocSize/16;
 		NewNode->IsAllocated = 0;
 		NewNode->Size = TargetNode->Size - sizeof(AllocNode) - AllocSize;
-		NewNode->Next = NULL;
+		NewNode->Next = TargetNode->Next;
 		TargetNode->IsAllocated = 1;
 		TargetNode->Size = AllocSize;
 		TargetNode->Next = NewNode;
@@ -153,8 +153,20 @@ int Mem_Free(void* ptr)
 		return -1;
 	}
 	
-	// TO deallocate ThisNode, simply set its IsAllocated value to 0
+	// To deallocate ThisNode, simply set its IsAllocated value to 0
 	ThisNode->IsAllocated = 0;
+	
+	// Now coalesce free adjacent memory units
+	ThisNode = AllocListHead;
+	while(ThisNode->Next != NULL)
+	{
+		if(ThisNode->IsAllocated == 0 && ThisNode->Next->IsAllocated == 0)
+		{
+			ThisNode->Size += sizeof(AllocNode) + ThisNode->Next->Size;
+			ThisNode->Next = ThisNode->Next->Next;
+		}
+		ThisNode = ThisNode->Next;
+	}
 	
 	
 	return 0;

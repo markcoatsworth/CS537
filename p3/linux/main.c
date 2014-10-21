@@ -30,7 +30,19 @@ int main()
 	
 	printf("Trying to free TestString2...\n");
 	Mem_Free(TestString2);
+	Mem_Dump();
 	
+	printf("Trying to free TestString3...\n");
+	Mem_Free(TestString3);
+	Mem_Dump();
+	
+	printf("Reallocating TestString2...\n");
+	TestString2 = (char*)Mem_Alloc(100);
+	Mem_Dump();
+	
+	printf("Reallocating TestString3...\n");
+	TestString3 = (char*)Mem_Alloc(300);
+	Mem_Dump();
 	
 	// Print out the first eight bytes pointed to by TestString
 	/*
@@ -56,9 +68,6 @@ int main()
 	}
 	printf("\n");
 	*/
-	
-	// Display memory dump
-	Mem_Dump();
 	
 	// All done!
 	return 0;	
