@@ -54,7 +54,6 @@ int Mem_Init(int size)
 	AllocListHead = HeadNode;
 	
 	// All done! Return
-	printf("Got memory at %p\n", ptr);
 	return 0;
 }
 
@@ -94,7 +93,7 @@ void* Mem_Alloc(int size)
 		ThisNode = ThisNode->Next;
 	}
 
-	// Make sure there is still enough space for the space requested; if not, return NULL
+	// Before splitting, make sure there is still enough space for the space requested; if not, return NULL
 	if(TargetNode->Size < (AllocSize + sizeof(AllocNode)))
 	{
 		return NULL;
@@ -146,7 +145,7 @@ int Mem_Free(void* ptr)
 		ThisNode = ThisNode->Next;
 	}
 	
-	printf("[Mem_Free} ptr=%p, ThisNode=%p\n", (void*)ptr, (void*)ThisNode);
+	//printf("[Mem_Free] ptr=%p, ThisNode=%p\n", (void*)ptr, (void*)ThisNode);
 	
 	// If ThisNode->Next now points to null, then nothing in our list matched the parameter. Exit now.
 	if(ThisNode == NULL)
@@ -166,7 +165,10 @@ int Mem_Free(void* ptr)
 			ThisNode->Size += sizeof(AllocNode) + ThisNode->Next->Size;
 			ThisNode->Next = ThisNode->Next->Next;
 		}
-		ThisNode = ThisNode->Next;
+		else
+		{
+			ThisNode = ThisNode->Next;
+		}
 		
 		// If we suddenly find ourselves at the end of the list, break out
 		if(ThisNode == NULL)
@@ -174,7 +176,6 @@ int Mem_Free(void* ptr)
 			break;
 		}
 	}
-	
 	
 	return 0;
 }

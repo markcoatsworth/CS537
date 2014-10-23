@@ -1,6 +1,5 @@
 /* many odd sized allocations and interspersed frees */
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include "mem.h"
 
@@ -30,16 +29,11 @@ int main() {
 
    assert(Mem_Free(ptr[4]) == 0);
 
-   printf("About to allocate ptr[8]\n");
-   Mem_Dump();
    ptr[8] = (Mem_Alloc(16));
-   printf("About to free ptr[8] (%p)\n", (void*)ptr[8]);
-   Mem_Dump();
    assert(ptr[8] != NULL);
 
    assert(Mem_Free(ptr[2]) == 0);
    assert(Mem_Free(ptr[7]) == 0);
-
    assert(Mem_Free(ptr[8]) == 0);
    assert(Mem_Free(ptr[6]) == 0);
 
