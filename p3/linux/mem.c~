@@ -68,11 +68,19 @@ void* Mem_Alloc(int size)
 	AllocNode* TargetNode;
 	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
+	int SpaceAvailable = Mem_Available();
 	
 	// Make sure allocation size is a multiple of 8. Allocate extra memory if necessary.
 	if((AllocSize % 8) != 0)
 	{
 		AllocSize += 8 - (AllocSize % 8);
+	}
+
+	// Make sure enough space is available. If not, exit.
+	printf("[Mem_Alloc] SpaceAvailable=%d, AllocSize=%d\n", SpaceAvailable, AllocSize);
+	if(SpaceAvailable < AllocSize)
+	{
+		return NULL;
 	}
 	
 	// Traverse the allocation list, determine the best place for new memory to go
@@ -94,7 +102,7 @@ void* Mem_Alloc(int size)
 	}
 
 	// Before splitting, make sure there is still enough space for the space requested; if not, return NULL
-	if(TargetNode->Size < (AllocSize + sizeof(AllocNode)))
+	if((TargetNode->Size != AllocSize) && TargetNode->Size < (AllocSize + sizeof(AllocNode)))
 	{
 		return NULL;
 	}
@@ -116,7 +124,7 @@ void* Mem_Alloc(int size)
 		TargetNode->Next = NewNode;
 	}
 	
-	//printf("[Mem_Alloc] TargetNode @ %p, NewNode @ %p\n", (void*)ThisNode, (void*)NewNode);
+	printf("[Mem_Alloc] TargetNode @ %p, NewNode @ %p\n", (void*)ThisNode, (void*)NewNode);
 	
 	// All done! Return the memory location address of the allocated memory
 	// (which is the location of the ThisNode pointer, plus the space reserved for the node structure)
@@ -187,15 +195,21 @@ int Mem_Free(void* ptr)
  */
 int Mem_Available()
 {
-	// Set the ThisNode pointer to the last node in the list
+	int AvailableSpace = 0;
+
+	// Iterate through the list, counting all free space
 	AllocNode* ThisNode = AllocListHead;
-	while(ThisNode->Next != NULL)
+	while(ThisNode != NULL)
 	{
+		if(ThisNode->IsAllocated == 0)
+		{
+			AvailableSpace += ThisNode->Size;
+		}
 		ThisNode = ThisNode->Next;
 	}
 	
 	// Now that ThisNode is pointing at the last node in the list, return its size
-	return ThisNode->Size;
+	return AvailableSpace;
 }
 
 /*
