@@ -1,0 +1,25 @@
+all: main
+
+main: main.c libmem1.so libmem2.so libmem3.so
+	gcc -lmem1 -lmem2 -lmem3 -L . -o main main.c -Wall -Werror
+	
+libmem1.so: mem1.o
+	gcc -shared -o libmem1.so mem1.o -Wall -Werror
+
+libmem2.so: mem2.o
+	gcc -shared -o libmem2.so mem2.o -Wall -Werror
+
+libmem3.so: mem3.o
+	gcc -shared -o libmem3.so mem3.o -Wall -Werror
+	
+mem1.o: mem1.c
+	gcc -c -fpic mem1.c -o mem1.o -Wall -Werror
+
+mem2.o: mem2.c
+	gcc -c -fpic mem2.c -o mem2.o -Wall -Werror
+
+mem3.o: mem3.c
+	gcc -c -fpic mem3.c -o mem3.o -Wall -Werror
+	
+clean:
+	rm -rf *.so *.o main

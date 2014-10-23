@@ -6,11 +6,18 @@ int main()
 {
 	// Initialize memory to 8 Kb
 	Mem_Init(8096);
+
 	
-	// Display memory dump
+	char *TestString1;
+	TestString1 = (char*)Mem_Alloc(16);
+	Mem_Dump();
+	
+	printf("Freeing memory...\n");
+	Mem_Free(TestString1);
 	Mem_Dump();
 	
 	// Now allocate several dummy objects
+	/*
 	char *TestString1;
 	char *TestString2;
 	char *TestString3;
@@ -43,30 +50,6 @@ int main()
 	printf("Reallocating TestString3...\n");
 	TestString3 = (char*)Mem_Alloc(300);
 	Mem_Dump();
-	
-	// Print out the first eight bytes pointed to by TestString
-	/*
-	printf("TestString1: ");
-	int i;
-	for(i = 0; i < 16; i ++)
-	{
-		printf("%d\t", TestString1[i]);
-	}
-	printf("\n");
-	
-	printf("TestString2: ");
-	for(i = 0; i < 16; i ++)
-	{
-		printf("%d\t", TestString2[i]);
-	}
-	printf("\n");
-	
-	printf("TestString3: ");
-	for(i = 0; i < 16; i ++)
-	{
-		printf("%d\t", TestString3[i]);
-	}
-	printf("\n");
 	*/
 	
 	// All done!

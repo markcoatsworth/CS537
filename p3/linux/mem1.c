@@ -70,6 +70,12 @@ void* Mem_Alloc(int size)
 	AllocNode* ThisNode = AllocListHead;
 	int AllocSize = size;
 	
+	// Only allow allocations of exactly 16 bytes
+	if(size != 16)
+	{
+		return NULL;
+	}
+	
 	// Make sure allocation size is a multiple of 8. Allocate extra memory if necessary.
 	if((AllocSize % 8) != 0)
 	{
@@ -94,6 +100,7 @@ void* Mem_Alloc(int size)
 		ThisNode = ThisNode->Next;
 	}
 
+	
 	// Make sure there is still enough space for the space requested; if not, return NULL
 	if(TargetNode->Size < (AllocSize + sizeof(AllocNode)))
 	{
@@ -146,8 +153,6 @@ int Mem_Free(void* ptr)
 		ThisNode = ThisNode->Next;
 	}
 	
-	printf("[Mem_Free} ptr=%p, ThisNode=%p\n", (void*)ptr, (void*)ThisNode);
-	
 	// If ThisNode->Next now points to null, then nothing in our list matched the parameter. Exit now.
 	if(ThisNode == NULL)
 	{
@@ -167,12 +172,6 @@ int Mem_Free(void* ptr)
 			ThisNode->Next = ThisNode->Next->Next;
 		}
 		ThisNode = ThisNode->Next;
-		
-		// If we suddenly find ourselves at the end of the list, break out
-		if(ThisNode == NULL)
-		{
-			break;
-		}
 	}
 	
 	
