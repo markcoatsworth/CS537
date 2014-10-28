@@ -54,6 +54,7 @@ argint(int n, int *ip)
 int
 argptr(int n, char **pp, int size)
 {
+  cprintf("[argptr] n=%d\n", n);
   int i;
   
   if(argint(n, &i) < 0)

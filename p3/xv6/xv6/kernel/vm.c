@@ -225,10 +225,11 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
 
 // Allocate page tables and physical memory to grow process from oldsz to
 // newsz, which need not be page aligned.  Returns new size or 0 on error.
+
 int
 allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
-  cprintf("[allocuvm] pgdir=%x, old size=%d, new size=%d\n", pgdir, oldsz, newsz);
+  cprintf("[allocuvm] pgdir=%x, old size=%x, new size=%x\n", pgdir, oldsz, newsz);
   char *mem;
   uint a;
 
@@ -239,7 +240,8 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
-    mem = kalloc();
+    cprintf("[allocuvm] allocating page starting at=%x\n", a);
+	mem = kalloc();
     if(mem == 0){
       cprintf("allocuvm out of memory\n");
       deallocuvm(pgdir, newsz, oldsz);
@@ -297,9 +299,11 @@ freevm(pde_t *pgdir)
 
 // Given a parent process's page table, create a copy
 // of it for a child.
+
 pde_t*
-copyuvm(pde_t *pgdir, uint sz)
+copyuvm(pde_t *pgdir, uint sz, uint sp)
 {
+	//cprintf("[copyuvm] copyvum called with sz=%x, sp=%x\n", sz, sp);
   pde_t *d;
   pte_t *pte;
   uint pa, i;
@@ -307,9 +311,10 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  // Do not copy the first bogus page! That will get allocated by exec(). Instead, start from end of the first page.
+  // Start copying memory from PGSIZE, to skip over the first non-allocated page.
   for(i = PGSIZE; i < sz; i += PGSIZE){
-    if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
+		cprintf("[copyuvm] copying page at sz=%x\n", i);    
+		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
@@ -320,13 +325,65 @@ copyuvm(pde_t *pgdir, uint sz)
     if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
       goto bad;
   }
+	
+	// Now that the stack is at the top of the memory space, we also have to copy these memory locations
+	sp -= (sp % PGSIZE);
+	for(i = sp; i < USERTOP; i += PGSIZE){
+		cprintf("[copyuvm] copying page at sp=%x\n", i);    
+		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
+      panic("copyuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("copyuvm: page not present");
+    pa = PTE_ADDR(*pte);
+    if((mem = kalloc()) == 0)
+      goto bad;
+    memmove(mem, (char*)pa, PGSIZE);
+    if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
+      goto bad;
+  }
+	cprintf("[copyuvm] all done, returning %x\n", d);
   return d;
 
 bad:
   freevm(d);
   return 0;
 }
+/*
+pde_t*
+copyuvm(pde_t *pgdir, uint sz)
+{
+	//cprintf("[copyuvm] copyvum called with sz=%x\n", sz);
+  pde_t *d;
+  pte_t *pte;
+  uint pa, i;
+  char *mem;
 
+  if((d = setupkvm()) == 0)
+    return 0;
+  // Start copying memory from PGSIZE, to skip over the first non-allocated page.
+  for(i = PGSIZE; i < sz; i += PGSIZE){
+		cprintf("[copyuvm] copying page at sz=%x\n", i);    
+		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
+      panic("copyuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("copyuvm: page not present");
+    pa = PTE_ADDR(*pte);
+    if((mem = kalloc()) == 0)
+      goto bad;
+    memmove(mem, (char*)pa, PGSIZE);
+    if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
+      goto bad;
+  }
+	
+	
+	cprintf("[copyuvm] all done, returning %x\n", d);
+  return d;
+
+bad:
+  freevm(d);
+  return 0;
+}
+*/
 // Map user virtual address to kernel physical address.
 char*
 uva2ka(pde_t *pgdir, char *uva)

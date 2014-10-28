@@ -9,6 +9,7 @@
 int
 sys_fork(void)
 {
+	cprintf("[sys_fork] called\n");
   return fork();
 }
 
@@ -44,6 +45,7 @@ sys_getpid(void)
 int
 sys_sbrk(void)
 {
+  cprintf("[sys_sbrk]\n");
   int addr;
   int n;
 
