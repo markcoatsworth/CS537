@@ -2,22 +2,35 @@
 # user programs
 USER_PROGS := \
 	cat\
-	echo\
-	forktest\
-	grep\
-	init\
-	kill\
-	ln\
-	ls\
-	mkdir\
-	nullptr\
-	rm\
-	sh\
-	stressfs\
-	tester\
-	usertests\
-	wc\
-	zombie
+        echo\
+        forktest\
+        grep\
+        init\
+        kill\
+        ln\
+        ls\
+        mkdir\
+        rm\
+        sh\
+        stressfs\
+        tester\
+        wc\
+        hello\
+        zombie\
+	bounds\
+	bounds2\
+	bounds3\
+	heap\
+	heap2\
+	null\
+	null2\
+	stack\
+	stack2\
+	stack3\
+	stack4\
+	syscalls\
+	usertests
+		
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
@@ -71,11 +84,9 @@ USER_LDFLAGS += -nostdlib
 USER_LDFLAGS += --omagic
 
 # where program execution should begin
-### Means that programs should be starting from the main function
 USER_LDFLAGS += --entry=main
 
-# location in memory where the program will be loaded
-### We'll eventually have to modify this as well to make sure we're not running into problems
+# location in memory where the program will be loaded(was 0x0 before)
 USER_LDFLAGS += --section-start=.text=0x1000
 
 user/bin:
