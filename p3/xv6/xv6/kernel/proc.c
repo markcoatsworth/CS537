@@ -110,6 +110,8 @@ growproc(int n)
   
   sz = proc->sz;
   if(n > 0){
+		if((sz + n) > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE))
+			return -1;
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
   } else if(n < 0){
