@@ -97,10 +97,11 @@ trap(struct trapframe *tf)
     }
     // In user space, assume process misbehaved.
 	/// This part is extremely important to us.
+	cprintf("[trap] A process in user space misbehaved!\n");
     cprintf("pid %d %s: trap %d err %d on cpu %d "
-            "eip 0x%x addr 0x%x--kill proc\n",
-            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, 
-            rcr2());
+            "eip 0x%x (%d) addr 0x%x (%d) --kill proc\n",
+            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, (int)tf->eip,
+            rcr2(), rcr2());
     proc->killed = 1;
   }
 

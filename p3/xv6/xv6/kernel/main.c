@@ -100,7 +100,8 @@ bootothers(void)
   // Write bootstrap code to unused memory at 0x7000.
   // The linker has placed the image of bootother.S in
   // _binary_bootother_start.
-  code = (uchar*)0x7000;
+  /// MC: Due to our extra one page offset, now write bootstrap code to memory at 0x8000
+  code = (uchar*)0x8000;
   memmove(code, _binary_bootother_start, (uint)_binary_bootother_size);
 
   for(c = cpus; c < cpus+ncpu; c++){

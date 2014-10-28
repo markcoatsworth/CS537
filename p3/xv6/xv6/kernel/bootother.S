@@ -11,6 +11,7 @@
 #
 # Bootothers (in main.c) sends the STARTUPs one at a time.
 # It copies this code (start) at 0x7000.
+### MC: now copies thie code to 0x8000
 # It puts the address of a newly allocated per-core stack in start-4,
 # and the address of the place to jump to (mpmain) in start-8.
 #

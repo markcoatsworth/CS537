@@ -228,6 +228,7 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
 int
 allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
+  cprintf("[allocuvm] pgdir=%x, old size=%d, new size=%d\n", pgdir, oldsz, newsz);
   char *mem;
   uint a;
 
@@ -306,7 +307,8 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  for(i = 0; i < sz; i += PGSIZE){
+  // Do not copy the first bogus page! That will get allocated by exec(). Instead, start from end of the first page.
+  for(i = PGSIZE; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))

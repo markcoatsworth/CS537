@@ -71,12 +71,12 @@ USER_LDFLAGS += -nostdlib
 USER_LDFLAGS += --omagic
 
 # where program execution should begin
-### Means that programs should be strarting from the main function
+### Means that programs should be starting from the main function
 USER_LDFLAGS += --entry=main
 
 # location in memory where the program will be loaded
 ### We'll eventually have to modify this as well to make sure we're not running into problems
-USER_LDFLAGS += --section-start=.text=0x0
+USER_LDFLAGS += --section-start=.text=0x1000
 
 user/bin:
 	mkdir -p user/bin

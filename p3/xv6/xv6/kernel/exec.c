@@ -44,6 +44,12 @@ exec(char *path, char **argv)
 	/// Doing this for the number of program headers you can find in the binary, and loading the
 	/// For each part of the program: let's load it into our process, one piece at a time
   sz = 0;
+  
+  // Allocate the first page of memory as a bogus page. This will make sure nothing useful goes in here. 
+  if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
+      goto bad;
+	cprintf("[exec] After allocating bogus page, sz=%d\n", sz);
+  
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
       goto bad;
@@ -57,8 +63,10 @@ exec(char *path, char **argv)
 	/// sz (size) must not be 0 if we want to have a segfault on the first page
 	/// If we want to produce a segfault on the first page, we want to shift this forward
 	/// The reason xv6 does not throw a segfault for address 0 is because it has allocated it
+	//cprintf("[exec] pgdir=%x, sz=%d, ph.va=%d, ph.mymsz=%d\n", pgdir, ph.va, ph.memsz);
     if((sz = allocuvm(pgdir, sz, ph.va + ph.memsz)) == 0)
       goto bad;
+	//cprintf("\t[exec] => sz=%d\n", sz);
 	/// At this point we have memory in our virtual address space, we can read and write to it
 	/// Now load the ph.va program header into our address space
     if(loaduvm(pgdir, (char*)ph.va, ip, ph.offset, ph.filesz) < 0)

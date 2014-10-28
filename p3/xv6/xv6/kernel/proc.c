@@ -135,6 +135,7 @@ fork(void)
     return -1;
 
   // Copy process state from p.
+  // This is where address space of the child is copied from address space of the parent?
   if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
     kfree(np->kstack);
     np->kstack = 0;

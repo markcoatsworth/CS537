@@ -4,6 +4,7 @@
 # The BIOS loads this code from the first sector of the hard disk into
 # memory at physical address 0x7c00 and starts executing in real mode
 # with %cs=0 %ip=7c00.
+### MC: Now it loads the code into memory at address 0x8c00
 
 #define SEG_KCODE 1  // kernel code
 #define SEG_KDATA 2  // kernel data+stack
