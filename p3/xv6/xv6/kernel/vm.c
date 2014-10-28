@@ -229,7 +229,6 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
 int
 allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
-  cprintf("[allocuvm] pgdir=%x, old size=%x, new size=%x\n", pgdir, oldsz, newsz);
   char *mem;
   uint a;
 
@@ -240,8 +239,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
-    cprintf("[allocuvm] allocating page starting at=%x\n", a);
-	mem = kalloc();
+		mem = kalloc();
     if(mem == 0){
       cprintf("allocuvm out of memory\n");
       deallocuvm(pgdir, newsz, oldsz);
@@ -313,7 +311,6 @@ copyuvm(pde_t *pgdir, uint sz, uint sp)
     return 0;
   // Start copying memory from PGSIZE, to skip over the first non-allocated page.
   for(i = PGSIZE; i < sz; i += PGSIZE){
-		cprintf("[copyuvm] copying page at sz=%x\n", i);    
 		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
@@ -329,7 +326,6 @@ copyuvm(pde_t *pgdir, uint sz, uint sp)
 	// Now that the stack is at the top of the memory space, we also have to copy these memory locations
 	sp -= (sp % PGSIZE);
 	for(i = sp; i < USERTOP; i += PGSIZE){
-		cprintf("[copyuvm] copying page at sp=%x\n", i);    
 		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
@@ -341,7 +337,6 @@ copyuvm(pde_t *pgdir, uint sz, uint sp)
     if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
       goto bad;
   }
-	cprintf("[copyuvm] all done, returning %x\n", d);
   return d;
 
 bad:

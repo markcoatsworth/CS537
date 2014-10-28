@@ -75,7 +75,6 @@ found:
 void
 userinit(void)
 {
-	cprintf("[userinit] called\n");
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
   
@@ -94,8 +93,6 @@ userinit(void)
   p->tf->eflags = FL_IF;
   p->tf->esp = PGSIZE;
   p->tf->eip = 0;  // beginning of initcode.S
-	cprintf("[userinit] p->tf->esp=%x\n", p->tf->esp);
-	cprintf("[userinit] p->tf->eip=%x\n", p->tf->eip);
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -133,7 +130,7 @@ fork(void)
   int i, pid;
   struct proc *np;
 
-	cprintf("[fork] proc->name=%s, proc->pid=%d\n", proc->name, proc->pid);
+	//cprintf("[fork] proc->name=%s, proc->pid=%d\n", proc->name, proc->pid);
 
   // Allocate process.
   if((np = allocproc()) == 0)
@@ -151,8 +148,8 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
-	cprintf("[fork] proc->pid=%d, proc->sz=%x, proc->sp=%x\n", proc->pid, proc->sz, proc->tf->esp);	
-	cprintf("[fork] np->sz=%x, np->sp=%x\n", np->sz, np->tf->esp);
+	//cprintf("[fork] proc->pid=%d, proc->sz=%x, proc->sp=%x\n", proc->pid, proc->sz, proc->tf->esp);	
+	//cprintf("[fork] np->sz=%x, np->sp=%x\n", np->sz, np->tf->esp);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -165,7 +162,7 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-	cprintf("[fork] all done, returning pid=%d\n", pid);
+	//cprintf("[fork] all done, returning pid=%d\n", pid);
   return pid;
 }
 
@@ -175,7 +172,6 @@ fork(void)
 void
 exit(void)
 {
-	cprintf("[exit] called by proc->name=%s\n", proc->name);
   struct proc *p;
   int fd;
 

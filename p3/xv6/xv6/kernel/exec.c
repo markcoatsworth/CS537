@@ -81,8 +81,9 @@ exec(char *path, char **argv)
   /// this so that it allocates the memory somewhere around USERTOP instead.
   /// We also need to change how sz is used, since we'll only be using sz to track the user code + heap, not the stack.  
   sz = PGROUNDUP(sz);
-  /* Old code allocating stack
-  if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
+  // Old code allocating stack
+	/*  
+	if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
     goto bad;
   */
   // Allocate the stack at the very top of the userspace. But do not point sz there!
@@ -92,7 +93,7 @@ exec(char *path, char **argv)
   // Point the stack pointer to the top of userspace
   //sp = sz;
   sp = USERTOP;
-
+	
   /// Put another blank page between the program code and the heap
   /// Also need to make sure the loaduvm() function jumps over this blank page
   /// sz += PGSIZE;  
