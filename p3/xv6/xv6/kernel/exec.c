@@ -76,14 +76,18 @@ exec(char *path, char **argv)
   ip = 0;
 
   // Allocate a one-page stack at the next page boundary
-  /// In xv6, we only have one page for the stack
+  /// In xv6, we only have one page for the stack.
+  /// This code allocates one block of memory for the stack directly after the user code. We'll have to change
+  /// this so that it allocates the memory somewhere around USERTOP instead.
+  /// We also need to change how sz is used, since we'll only be using sz to track the user code + heap, not the stack.  
   sz = PGROUNDUP(sz);
   if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
     goto bad;
 
   // Push argument strings, prepare rest of stack in ustack.
   /// This loop just copies the argv array onto the user stack
-  /// If we just relocated the stack (away from size, and towards some other address in the address space) then the rest of it should still work
+  /// If we just relocated the stack (away from size, and towards some other address in the address space) 
+  /// then the rest of it should still work.
   /// Because it doesn't really care where the stack is
   /// So we can relocate it, just make sure we allocate space there, and make sure the address pointer points there
   /// However this will still not allow us to grow the stack beyond a single page
