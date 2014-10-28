@@ -6,7 +6,7 @@
 int main()
 {
 		int* NullPointer;
-		NullPointer = (int*)0;
+		NullPointer = 0;
 		
 		printf(1, "Dereferencing a null pointer...\n");
 		printf(1, "NullPointer=%d\n", NullPointer);

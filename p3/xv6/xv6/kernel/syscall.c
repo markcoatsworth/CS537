@@ -19,14 +19,6 @@ fetchint(struct proc *p, uint addr, int *ip)
 {
   if(addr >= p->sz || addr+4 > p->sz)
     return -1;
-
-  // Dereference null pointer!
-  if(addr == 0)
-  {
-    cprintf("[fetchint] Caught null pointer reference!\n");
-	return -1;
-  }
-
   *ip = *(int*)(addr);
   return 0;
 }
@@ -41,14 +33,6 @@ fetchstr(struct proc *p, uint addr, char **pp)
 
   if(addr >= p->sz)
     return -1;
-	
-  // Dereference null pointer!
-  if(addr == 0)
-  {
-    cprintf("[fetchstr] Caught null pointer reference!\n");
-    return -1;
-  }
-  
   *pp = (char*)addr;
   ep = (char*)p->sz;
   for(s = *pp; s < ep; s++)
@@ -76,11 +60,6 @@ argptr(int n, char **pp, int size)
     return -1;
   if((uint)i >= proc->sz || (uint)i+size > proc->sz)
     return -1;
-  if((uint)i == 0)
-  {
-    cprintf("[argptr] Caught null pointer reference!\n");
-	return -1;
-  }
   *pp = (char*)i;
   return 0;
 }
@@ -95,11 +74,6 @@ argstr(int n, char **pp)
   int addr;
   if(argint(n, &addr) < 0)
     return -1;
-  if(argint(n, &addr) == 0)
-  {
-    //cprintf("[argstr] Caught null pointer reference!\n");
-	//return -1;
-  }
   return fetchstr(proc, addr, pp);
 }
 

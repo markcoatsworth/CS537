@@ -43,11 +43,11 @@ exec(char *path, char **argv)
 	/// This code is reading in your binary and looking at the offsets for your program headers
 	/// Doing this for the number of program headers you can find in the binary, and loading the
 	/// For each part of the program: let's load it into our process, one piece at a time
-  sz = 0;
+  sz = PGSIZE;
   
   // Allocate the first page of memory as a bogus page. This will make sure nothing useful goes in here. 
-  if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
-      goto bad;
+  //if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
+  //    goto bad;
 	cprintf("[exec] After allocating bogus page, sz=%d\n", sz);
   
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
