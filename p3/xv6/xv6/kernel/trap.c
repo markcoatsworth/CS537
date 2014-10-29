@@ -40,9 +40,14 @@ trap(struct trapframe *tf)
 		cprintf("We got a page fault at address %x\n", rcr2());
 		if(RequestedAddress > (proc->tf->esp - PGSIZE))
 		{
-			cprintf("[trap] Allocate a new page to the stack\n");
-			// allocuvm(something, something);
-			// now continue to run!
+			/*
+			if(RequestedAddress is not too close to the heap)
+			{
+				cprintf("[trap] Allocate a new page to the stack\n");		
+				allocuvm(something, something);
+				now continue to run!
+			}
+			*/
 		}	
 		/// Add code to gracefully handle this
 		/// Check what address it is faulting on
