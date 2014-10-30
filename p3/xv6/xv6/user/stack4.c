@@ -32,20 +32,20 @@ main(int argc, char *argv[])
   uint stackpage = (160 - 1) * PGSIZE;
   uint guardpage = stackpage - PGSIZE;
 
-  // ensure they actually placed the stack high...
+  printf(1, "[stack4] ensure they actually placed the stack high...\n");
   assert((uint)&ppid == 0x9ffcc);
 
-  // should work fine
+  printf(1, "[stack4] should work fine\n");
   growstack(1);
   stackpage -= PGSIZE;
   guardpage -= PGSIZE;
 
-  // grow heap right below the guard page
+  printf(1, "[stack4] grow heap right below the guard page\n");
   assert((int) sbrk(guardpage - sz) != -1);
 
   int pid = fork();
   if(pid == 0) {
-    // should fail
+    printf(1, "[stack4] should fail\n");
     growstack(2);
     printf(1, "TEST FAILED\n");
     kill(ppid);

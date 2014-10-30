@@ -37,17 +37,17 @@ trap(struct trapframe *tf)
 	if(tf->trapno == T_PGFLT)
 	{
 		uint RequestedAddress = rcr2();
-		cprintf("We got a page fault at address %x\n", rcr2());
-		if(RequestedAddress > (proc->tf->esp - PGSIZE))
+		cprintf("[trap] Page fault at address %x. Stack pointer is at %x.\n", rcr2(), proc->tf->esp);
+		if(RequestedAddress > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE))
 		{
-			/*
-			if(RequestedAddress is not too close to the heap)
+			cprintf("Requested address is within reach of the stack!\n");
+			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
 			{
-				cprintf("[trap] Allocate a new page to the stack\n");		
-				allocuvm(something, something);
-				now continue to run!
+				cprintf("Requested address is far enough from the heap. Allocate it!\n");
+				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE));
+				cprintf("Now figure out how to revive the process! proc->state=%d\n", proc->state);
+				
 			}
-			*/
 		}	
 		/// Add code to gracefully handle this
 		/// Check what address it is faulting on

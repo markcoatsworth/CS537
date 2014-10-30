@@ -48,7 +48,7 @@ exec(char *path, char **argv)
   // Allocate the first page of memory as a bogus page. This will make sure nothing useful goes in here. 
   //if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
   //    goto bad;
-	cprintf("[exec] After allocating bogus page, sz=%d\n", sz);
+	//cprintf("[exec] After allocating bogus page, sz=%d\n", sz);
   
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -130,7 +130,7 @@ exec(char *path, char **argv)
     if(*s == '/')
       last = s+1;
   safestrcpy(proc->name, last, sizeof(proc->name));
-  cprintf("[exec] proc->name=%s\n", proc->name);
+  //cprintf("[exec] proc->name=%s\n", proc->name);
 
   // Commit to the user image.
   /// Now we're done and switching to the new page table
@@ -143,7 +143,7 @@ exec(char *path, char **argv)
   /// Note that we haven't done anything for the heap; is implicit that the heap starts after the stack
   switchuvm(proc);
   freevm(oldpgdir);
-	cprintf("[exec] all done, returning 0\n");
+	cprintf("[exec] all finished! proc->name=%s, proc->sz=%x, proc->sp=%x\n", proc->name, proc->sz, proc->tf->esp);
   return 0;
 
  bad:

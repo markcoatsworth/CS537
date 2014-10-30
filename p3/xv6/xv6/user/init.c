@@ -10,7 +10,6 @@ char *argv[] = { "sh", 0 };
 int
 main(void)
 {
-	printf(1, "[init] called\n");
   int pid, wpid;
 
   if(open("console", O_RDWR) < 0){
@@ -28,7 +27,6 @@ main(void)
       exit();
     }
     if(pid == 0){
-			printf(1, "[init] exec sh\n");
       exec("sh", argv);
       printf(1, "init: exec sh failed\n");
       exit();

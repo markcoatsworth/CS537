@@ -17,11 +17,13 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-	//cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
+  //cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
   if((addr >= p->sz || addr+4 > p->sz) && (addr < p->tf->esp))
     return -1;
-	if(addr > USERTOP)
-		return -1;
+  if(addr > USERTOP)
+	return -1;
+  //if(addr >= 0 && addr < PGSIZE)
+  //  return -1;
   *ip = *(int*)(addr);
   return 0;
 }
@@ -32,12 +34,15 @@ fetchint(struct proc *p, uint addr, int *ip)
 int
 fetchstr(struct proc *p, uint addr, char **pp)
 {
+  //cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
   char *s, *ep;
 
   if(addr >= p->sz && addr < p->tf->esp)
     return -1;
-	if(addr > USERTOP)
-		return -1;
+  if(addr > USERTOP)
+    return -1;
+  //if(addr >= 0 && addr < PGSIZE)
+  //  return -1;
   *pp = (char*)addr;
   ep = (char*)p->sz;
   for(s = *pp; s < ep; s++)
@@ -63,9 +68,13 @@ argptr(int n, char **pp, int size)
   
   if(argint(n, &i) < 0)
     return -1;
+//  cprintf("[argptr] i=%x\n", i);
+    
   if(((uint)i >= proc->sz || (uint)i+size > proc->sz) && (uint)i < proc->tf->esp)
     return -1;
-	if((uint)i > USERTOP)
+  if((uint)i >= 0 && (uint)i < PGSIZE)
+    return -1;
+  if((uint)i > USERTOP)
 		return -1;
   *pp = (char*)i;
   return 0;

@@ -30,34 +30,34 @@ main(int argc, char *argv[])
   int fd = open("tmp", O_WRONLY|O_CREATE);
   assert(fd != -1);
 
-  /* grow the stack a bit */
+  printf(1, "grow the stack a bit\n");
   foo();
   uint STACK = 150*4096;
   uint USERTOP = 160*4096;
 
-  /* below stack */
+  printf(1, "below stack\n");
   arg = (char*) STACK - 1;
   assert(write(fd, arg, 1) == -1);
 
-  /* spanning stack bottom */
+  printf(1, "spanning stack bottom\n");
   assert(write(fd, arg, 2) == -1);
 
-  /* at stack */
+  printf(1, "at stack\n");
   arg = (char*) STACK;
   assert(write(fd, arg, 1) != -1);
 
-  /* within stack */
+  printf(1, "within stack\n");
   arg = (char*) (STACK + 8192);
   assert(write(fd, arg, 40) != -1);
 
-  /* at stack top */
+  printf(1, "at stack top\n");
   arg = (char*) USERTOP-1;
   assert(write(fd, arg, 1) != -1);
 
-  /* spanning stack top */
+  printf(1, "spanning stack top\n");
   assert(write(fd, arg, 2) == -1);
 
-  /* above stack top */
+  printf(1, "above stack top\n");
   arg = (char*) USERTOP;
   assert(write(fd, arg, 1) == -1);
 

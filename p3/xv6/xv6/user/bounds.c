@@ -22,15 +22,15 @@ main(int argc, char *argv[])
   int fd = open("tmp", O_WRONLY|O_CREATE);
   assert(fd != -1);
 
-  /* trying to read data at zero, should fail*/
+  printf(1, "trying to read data at zero, should fail\n");
   arg = (char*) 0x0;
   assert(write(fd, arg, 10) == -1);
 
-  /* within null page */
+  printf(1, "within null page\n");
   arg = (char*) 0x400;
   assert(write(fd, arg, 1024) == -1);
 
-  /* spanning null page and code, because the length is 2 */
+  printf(1, "spanning null page and code, because the length is 2\n");
   arg = (char*) 0xfff;
   assert(write(fd, arg, 2) == -1);
 
