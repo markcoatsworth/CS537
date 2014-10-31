@@ -18,6 +18,7 @@
 void
 growstack(int n) 
 {
+	printf(1,"Allocate char filler[4096]...\n");
   char filler[4096];
   filler[0] = filler[0]; // must use or compiler error...
   if(n > 1)
@@ -37,6 +38,7 @@ main(int argc, char *argv[])
 
   printf(1, "[stack4] should work fine\n");
   growstack(1);
+	printf(1,"[stack4] grew stack successfully!\n");
   stackpage -= PGSIZE;
   guardpage -= PGSIZE;
 

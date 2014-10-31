@@ -374,8 +374,11 @@ sys_pipe(void)
   struct file *rf, *wf;
   int fd0, fd1;
 
-  if(argptr(0, (void*)&fd, 2*sizeof(fd[0])) < 0)
+  if(argptr(0, (void*)&fd, 2*sizeof(fd[0])) < 0) {
+		cprintf("[pipe] value of addr = %d\n",fd);
     return -1;
+	}
+
   if(pipealloc(&rf, &wf) < 0)
     return -1;
   fd0 = -1;

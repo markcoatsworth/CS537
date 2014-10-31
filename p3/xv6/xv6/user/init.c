@@ -21,7 +21,9 @@ main(void)
 	
   for(;;){ 
 		printf(1, "init: starting sh\n");
-    pid = fork();
+		pid = fork();
+		printf(1, "with pid = %d\n",pid);
+
 		if(pid < 0){
       printf(1, "init: fork failed\n");
       exit();

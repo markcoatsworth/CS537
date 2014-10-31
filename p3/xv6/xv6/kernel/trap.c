@@ -34,6 +34,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+/*
 	if(tf->trapno == T_PGFLT)
 	{
 		uint RequestedAddress = rcr2();
@@ -44,11 +45,13 @@ trap(struct trapframe *tf)
 			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
 			{
 				cprintf("Requested address is far enough from the heap. Allocate it!\n");
-				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE));
+				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
+				
 				cprintf("Now figure out how to revive the process! proc->state=%d\n", proc->state);
 				
 			}
 		}	
+*/
 		/// Add code to gracefully handle this
 		/// Check what address it is faulting on
 		/// And make sure that you allocate the page
@@ -57,7 +60,7 @@ trap(struct trapframe *tf)
 		/// Should only allocate if we're getting the page fault close to the end of the stack
 		/// Also keep in mind, the stack can grow and ocllide with the heap
 		/// So we should allocate a "null" page between the stack and heap. We always want to have one null page between them.
-	}
+//	}	
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
@@ -68,7 +71,36 @@ trap(struct trapframe *tf)
     return;
   }
 
+	uint RequestedAddress = rcr2();
   switch(tf->trapno){
+
+	case (T_PGFLT):
+		///uint RequestedAddress = rcr2();
+		cprintf("[trap] Page fault at address %x. Stack pointer is at %x.\n", rcr2(), proc->tf->esp);
+		if(RequestedAddress > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE))
+		{
+			cprintf("Requested address is within reach of the stack!\n");
+			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
+			{
+				cprintf("Requested address is far enough from the heap. Allocate it!\n");
+				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
+				///allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE), proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE);
+				
+				cprintf("Now figure out how to revive the process! proc->state=%d\n", proc->state);
+				break;	
+			}
+			cprintf("[trap] Requested Address is too close to the heap! Kill it!\n");
+			proc->killed = 1;///too close to the heap!
+		}
+		else
+		{
+			cprintf("[trap] Requested Address is NOT within reach of the stack! Kill it!\n");
+			if (RequestedAddress == NULL) {proc->killed = 1; } ///NULL page dereference - works for test null.c
+			if (RequestedAddress >= USERTOP) {proc->killed = 1;} ///Trying to access an address at or above 640K
+			if (RequestedAddress - (proc->tf->esp % PGSIZE) > PGSIZE) { proc->killed = 1; } ///Farther than one page away
+			if (RequestedAddress < (proc->sz + (proc->sz % PGSIZE) + PGSIZE) ) { proc->killed = 1; } ///Too close to the heap 
+		}
+
   case T_IRQ0 + IRQ_TIMER:
     if(cpu->id == 0){
       acquire(&tickslock);

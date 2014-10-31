@@ -25,7 +25,7 @@ main(int argc, char *argv[])
 
   // ensure stack is actually high...
   assert((uint) &local > 639*1024);
-
+	printf(1,"test the heap\n");
   /* heap */
   char *filename = (char*) malloc(16);
   strcpy(filename, "3b.tmp");
@@ -42,8 +42,9 @@ main(int argc, char *argv[])
   assert(pipe(pipefds) == -1);
 
   /* pointer to memory past the stack */
+	printf(1,"[syscalls] try to pipe at 640 * 1024\n");
   pipefds = (int*)(640 * 1024);
-  assert(pipe(pipefds) == -1);
+  assert(pipe(pipefds) == -1); ///fails here
 
   printf(1, "TEST PASSED\n");
   exit();

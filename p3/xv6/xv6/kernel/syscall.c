@@ -18,10 +18,22 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
   //cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
+ 	///cprintf("[fetchint] addr is %d\n",addr);
   if((addr >= p->sz || addr+4 > p->sz) && (addr < p->tf->esp))
     return -1;
-  if(addr > USERTOP)
-	return -1;
+  if(addr >= USERTOP) {
+		cprintf("[fetchint] addr is greater than USERTOP\n");
+		return -1;
+	}
+	
+	///if(addr == USERTOP && proc->pid > 2)
+		///return -1;
+		
+	///if( (addr - proc->tf->esp) > PGSIZE && (proc->pid > 2) ) {
+	///	cprintf("[error] address more than PGSIZE away\n");
+	///	return -1;
+	///}
+	
   //if(addr >= 0 && addr < PGSIZE)
   //  return -1;
   *ip = *(int*)(addr);
@@ -39,8 +51,14 @@ fetchstr(struct proc *p, uint addr, char **pp)
 
   if(addr >= p->sz && addr < p->tf->esp)
     return -1;
-  if(addr > USERTOP)
+  if(addr >= USERTOP )
     return -1;
+	///if(addr == USERTOP && proc->pid != 1)
+	///		return -1;
+	
+	///if( (proc->tf->esp - addr ) > PGSIZE && proc->pid != 1)
+	///	return -1;
+	
   //if(addr >= 0 && addr < PGSIZE)
   //  return -1;
   *pp = (char*)addr;
