@@ -77,16 +77,17 @@ trap(struct trapframe *tf)
 	case (T_PGFLT):
 		///uint RequestedAddress = rcr2();
 		cprintf("[trap] Page fault at address %x. Stack pointer is at %x.\n", rcr2(), proc->tf->esp);
-		if(RequestedAddress > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE))
+		///if(RequestedAddress > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE))
+		if(RequestedAddress > (proc->pbase - PGSIZE) )
 		{
 			cprintf("Requested address is within reach of the stack!\n");
 			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
 			{
 				cprintf("Requested address is far enough from the heap. Allocate it!\n");
-
-				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
-				///allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE), proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE);
+				//allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
+				allocuvm(proc->pgdir, proc->pbase - PGSIZE, proc->pbase);
 				
+				///proc->pbase = proc->pbase - PGSIZE; change this in allocuvm() right now
 				cprintf("Now figure out how to revive the process! proc->state=%d\n", proc->state);
 				break;	
 			}
@@ -98,7 +99,8 @@ trap(struct trapframe *tf)
 			cprintf("[trap] Requested Address is NOT within reach of the stack! Kill it!\n");
 			if (RequestedAddress == NULL) {proc->killed = 1; } ///NULL page dereference - works for test null.c
 			if (RequestedAddress >= USERTOP) {proc->killed = 1;} ///Trying to access an address at or above 640K
-			if (RequestedAddress - (proc->tf->esp % PGSIZE) > PGSIZE) { proc->killed = 1; } ///Farther than one page away
+			//if (RequestedAddress - (proc->tf->esp % PGSIZE) > PGSIZE) { proc->killed = 1; } ///Farther than one page away
+			if(RequestedAddress - (proc->pbase) > PGSIZE) { proc->killed = 1; }
 			if (RequestedAddress < (proc->sz + (proc->sz % PGSIZE) + PGSIZE) ) { proc->killed = 1; } ///Too close to the heap 
 		}
 

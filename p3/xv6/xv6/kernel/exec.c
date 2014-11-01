@@ -93,6 +93,8 @@ exec(char *path, char **argv)
   // Point the stack pointer to the top of userspace
   //sp = sz;
   sp = USERTOP;
+	///proc->pbase = USERTOP - PGSIZE; ///start it at the top of the process space
+																	///minus a single page
 	
   /// Put another blank page between the program code and the heap
   /// Also need to make sure the loaduvm() function jumps over this blank page
@@ -137,6 +139,7 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
+	proc->pbase = USERTOP - PGSIZE; ///track our stack base
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
   /// Now the page table that we've carefully created gets used, and we free up the old one

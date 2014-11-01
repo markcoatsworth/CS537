@@ -248,6 +248,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     memset(mem, 0, PGSIZE);
     mappages(pgdir, (char*)a, PGSIZE, PADDR(mem), PTE_W|PTE_U);
   }
+	proc->pbase = proc->pbase - PGSIZE;
   return newsz;
 }
 
