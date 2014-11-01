@@ -375,9 +375,10 @@ sys_pipe(void)
   int fd0, fd1;
 
   if(argptr(0, (void*)&fd, 2*sizeof(fd[0])) < 0) {
-		cprintf("[pipe] value of addr = %d\n",fd);
+		cprintf("[pipe] value of addr = %p\n",fd);
     return -1;
 	}
+	cprintf("[pipe] passed argptr check\n");
 
   if(pipealloc(&rf, &wf) < 0)
     return -1;

@@ -92,7 +92,7 @@ argptr(int n, char **pp, int size)
     return -1;
   if((uint)i >= 0 && (uint)i < PGSIZE)
     return -1;
-  if((uint)i > USERTOP)
+  if((uint)i >= USERTOP)
 		return -1;
   *pp = (char*)i;
   return 0;

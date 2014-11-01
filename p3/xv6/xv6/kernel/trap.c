@@ -83,6 +83,7 @@ trap(struct trapframe *tf)
 			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
 			{
 				cprintf("Requested address is far enough from the heap. Allocate it!\n");
+
 				allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
 				///allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE), proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE);
 				

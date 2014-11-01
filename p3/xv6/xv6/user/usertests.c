@@ -1278,6 +1278,7 @@ sbrktest(void)
     exit();
   wait();
 
+
   // can one allocate the full 640K?
   a = sbrk(0);
   amt = (640 * 1024) - (uint)a;
