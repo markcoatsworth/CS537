@@ -98,11 +98,18 @@ trap(struct trapframe *tf)
 		{
 			cprintf("[trap] Requested Address is NOT within reach of the stack! Kill it!\n");
 			if (RequestedAddress == NULL) {proc->killed = 1; } ///NULL page dereference - works for test null.c
-			if (RequestedAddress >= USERTOP) {proc->killed = 1;} ///Trying to access an address at or above 640K
+			if (RequestedAddress >= USERTOP) {
+				proc->killed = 1;
+				cprintf("[trap] RequestedAddress >= USERTOP\n");
+			} ///Trying to access an address at or above 640K
+			if (RequestedAddress >= proc->pbase ) { proc->killed = 1; }
+			//if(RequestedAddress >= proc->tf->esp ) { proc->killed = 1; }
 			//if (RequestedAddress - (proc->tf->esp % PGSIZE) > PGSIZE) { proc->killed = 1; } ///Farther than one page away
 			//if(RequestedAddress - (proc->pbase) > PGSIZE) { proc->killed = 1; }
 			if( proc->pbase - RequestedAddress > PGSIZE) { proc->killed = 1; } //more than 1 page away
-			if (RequestedAddress < (proc->sz + (proc->sz % PGSIZE) + PGSIZE) ) { proc->killed = 1; } ///Too close to the heap 
+			if(RequestedAddress < (proc->sz + (proc->sz % PGSIZE) + PGSIZE) ) { proc->killed = 1; } ///Too close to the heap 
+			//cprintf("[trap] none of the above reasons for getting killed.\n");
+			proc->killed = 1;
 		}
 
   case T_IRQ0 + IRQ_TIMER:
