@@ -48,6 +48,7 @@ main(int argc, char *argv[])
   assert(write(fd, arg, 2) == -1);
 
   /* at stack */
+
   arg = (char*) STACK;
   assert(write(fd, arg, 1) != -1);
 

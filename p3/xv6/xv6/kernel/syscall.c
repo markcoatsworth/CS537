@@ -94,6 +94,10 @@ argptr(int n, char **pp, int size)
     return -1;
   if((uint)i >= USERTOP)
 		return -1;
+
+	if( (uint)i < proc->pbase - PGSIZE)
+		return -1;
+
   *pp = (char*)i;
   return 0;
 }

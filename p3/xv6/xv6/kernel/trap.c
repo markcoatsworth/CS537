@@ -81,13 +81,13 @@ trap(struct trapframe *tf)
 		if(RequestedAddress > (proc->pbase - PGSIZE) )
 		{
 			cprintf("Requested address is within reach of the stack!\n");
-			if(RequestedAddress > (proc->sz + (proc->sz % PGSIZE) + PGSIZE))
+			if(RequestedAddress > (proc->sz +(proc->sz % PGSIZE) + PGSIZE))
 			{
 				cprintf("Requested address is far enough from the heap. Allocate it!\n");
 				//allocuvm(proc->pgdir, proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE, proc->tf->esp - (proc->tf->esp % PGSIZE) );
 				allocuvm(proc->pgdir, proc->pbase - PGSIZE, proc->pbase);
-				
-				///proc->pbase = proc->pbase - PGSIZE; change this in allocuvm() right now
+				cprintf("value of proc->pbase = %d\n",proc->pbase);	
+				//proc->pbase = proc->pbase - PGSIZE; //change this in allocuvm() for now
 				cprintf("Now figure out how to revive the process! proc->state=%d\n", proc->state);
 				break;	
 			}
@@ -100,7 +100,8 @@ trap(struct trapframe *tf)
 			if (RequestedAddress == NULL) {proc->killed = 1; } ///NULL page dereference - works for test null.c
 			if (RequestedAddress >= USERTOP) {proc->killed = 1;} ///Trying to access an address at or above 640K
 			//if (RequestedAddress - (proc->tf->esp % PGSIZE) > PGSIZE) { proc->killed = 1; } ///Farther than one page away
-			if(RequestedAddress - (proc->pbase) > PGSIZE) { proc->killed = 1; }
+			//if(RequestedAddress - (proc->pbase) > PGSIZE) { proc->killed = 1; }
+			if( proc->pbase - RequestedAddress > PGSIZE) { proc->killed = 1; } //more than 1 page away
 			if (RequestedAddress < (proc->sz + (proc->sz % PGSIZE) + PGSIZE) ) { proc->killed = 1; } ///Too close to the heap 
 		}
 
