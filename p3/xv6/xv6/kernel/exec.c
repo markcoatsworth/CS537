@@ -15,7 +15,7 @@ exec(char *path, char **argv)
   /// However there is a problem because xv6 thinks that sz is the limit of the stack, if we try to go beyond it then it throws tantrums
   /// So in the new xv6, it's okay to go beyond the value in the sz variable so long as it's in our stack
   /// (might be some mistakes in that...)
-  uint argc, sz, sp, ustack[3+MAXARG+1];
+  uint argc, sz, elfsz, sp, ustack[3+MAXARG+1];
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -38,17 +38,14 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
+  // Do not allocate the first page, so null pointer dereferences will fail!
+  sz = PGSIZE;
+  
   // Load program into memory.
 	/// Remember that your program code can have several sections
 	/// This code is reading in your binary and looking at the offsets for your program headers
 	/// Doing this for the number of program headers you can find in the binary, and loading the
 	/// For each part of the program: let's load it into our process, one piece at a time
-  sz = PGSIZE;
-  
-  // Allocate the first page of memory as a bogus page. This will make sure nothing useful goes in here. 
-  //if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
-  //    goto bad;
-	//cprintf("[exec] After allocating bogus page, sz=%d\n", sz);
   
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -81,11 +78,13 @@ exec(char *path, char **argv)
   /// this so that it allocates the memory somewhere around USERTOP instead.
   /// We also need to change how sz is used, since we'll only be using sz to track the user code + heap, not the stack.  
   sz = PGROUNDUP(sz);
+  elfsz = sz;  
   // Old code allocating stack
 	/*  
 	if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
     goto bad;
   */
+  
   // Allocate the stack at the very top of the userspace. But do not point sz there!
   if(allocuvm(pgdir, USERTOP - PGSIZE, USERTOP) == 0)
 		goto bad;
@@ -93,12 +92,10 @@ exec(char *path, char **argv)
   // Point the stack pointer to the top of userspace
   //sp = sz;
   sp = USERTOP;
-	///proc->pbase = USERTOP - PGSIZE; ///start it at the top of the process space
-																	///minus a single page
 	
   /// Put another blank page between the program code and the heap
   /// Also need to make sure the loaduvm() function jumps over this blank page
-  /// sz += PGSIZE;  
+  sz += PGSIZE;  
 	
   // Push argument strings, prepare rest of stack in ustack.
   /// This loop just copies the argv array onto the user stack
@@ -138,15 +135,16 @@ exec(char *path, char **argv)
   /// Now we're done and switching to the new page table
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
+  proc->stacksz = PGSIZE;
   proc->sz = sz;
-	proc->pbase = USERTOP - PGSIZE; ///track our stack base
+  proc->elfsz = elfsz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
   /// Now the page table that we've carefully created gets used, and we free up the old one
   /// Note that we haven't done anything for the heap; is implicit that the heap starts after the stack
   switchuvm(proc);
   freevm(oldpgdir);
-	cprintf("[exec] all finished! proc->name=%s, proc->sz=%x, proc->sp=%x\n", proc->name, proc->sz, proc->tf->esp);
+	cprintf("[exec] all finished! proc->name=%s, proc->sz=%x, proc->sp=%x, proc->tf->trapno=%d\n", proc->name, proc->sz, proc->tf->esp, proc->tf->trapno);
   return 0;
 
  bad:

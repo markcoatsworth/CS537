@@ -229,6 +229,7 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
 int
 allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
+	cprintf("[allocuvm] pgdir=0x%x, oldsz=0x%x, newsz=0x%x\n", pgdir, oldsz, newsz);
   char *mem;
   uint a;
 
@@ -247,11 +248,8 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     }
     memset(mem, 0, PGSIZE);
     mappages(pgdir, (char*)a, PGSIZE, PADDR(mem), PTE_W|PTE_U);
-		///proc->pbase = proc->pbase - PGSIZE; //doesn't seem to make a difference whether it's here or below...
   }
-	//proc->pbase = proc->pbase - PGSIZE;
-	proc->pbase = a;
-  return newsz;
+	return newsz;
 }
 
 // Deallocate user pages to bring the process size from oldsz to
@@ -302,9 +300,9 @@ freevm(pde_t *pgdir)
 // of it for a child.
 
 pde_t*
-copyuvm(pde_t *pgdir, uint sz, uint sp)
+copyuvm(pde_t *pgdir, uint sz, uint elfsz, uint stacksz)
 {
-	//cprintf("[copyuvm] copyvum called with sz=%x, sp=%x\n", sz, sp);
+	cprintf("[copyuvm] copyvum called for proc=%s, sz=0x%x, elfsz=0x%x, stacksz=%d\n", proc->name, sz, elfsz, stacksz);
   pde_t *d;
   pte_t *pte;
   uint pa, i;
@@ -314,10 +312,20 @@ copyuvm(pde_t *pgdir, uint sz, uint sp)
     return 0;
   // Start copying memory from PGSIZE, to skip over the first non-allocated page.
   for(i = PGSIZE; i < sz; i += PGSIZE){
-		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
+	cprintf("[copyuvm] checking for guard page, i=0x%x, guard=0x%x\n", i, elfsz);
+	// Check if this is the post-elf empty page. If so, skip over this loop iteration.
+  	if(i == elfsz)
+  	{
+  		cprintf("[copyuvm] this is the guard page, skip over it\n");
+  		continue;
+  	}
+	if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
+    {
+      cprintf("[copyuvm] is this the guard page? i=0x%x\n", i);
       panic("copyuvm: page not present");
+    }
     pa = PTE_ADDR(*pte);
     if((mem = kalloc()) == 0)
       goto bad;
@@ -327,8 +335,7 @@ copyuvm(pde_t *pgdir, uint sz, uint sp)
   }
 	
 	// Now that the stack is at the top of the memory space, we also have to copy these memory locations
-	sp -= (sp % PGSIZE);
-	for(i = sp; i < USERTOP; i += PGSIZE){
+	for(i = USERTOP - stacksz; i < USERTOP; i += PGSIZE){
 		if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))

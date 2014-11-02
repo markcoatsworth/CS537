@@ -18,22 +18,13 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
   //cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
- 	///cprintf("[fetchint] addr is %d\n",addr);
-  if((addr >= p->sz || addr+4 > p->sz) && (addr < p->tf->esp))
+  if((addr >= p->sz || addr+4 > p->sz) && (addr < (USERTOP - proc->stacksz)))
     return -1;
-  if(addr >= USERTOP) {
-		cprintf("[fetchint] addr is greater than USERTOP\n");
-		return -1;
-	}
-	
-	///if(addr == USERTOP && proc->pid > 2)
-		///return -1;
-		
-	///if( (addr - proc->tf->esp) > PGSIZE && (proc->pid > 2) ) {
-	///	cprintf("[error] address more than PGSIZE away\n");
-	///	return -1;
-	///}
-	
+  if(addr >= (USERTOP - sizeof(int)))
+	return -1;
+//  if(addr >= p->elfsz && addr < (p->elfsz + PGSIZE));
+//    return -1;    
+
   //if(addr >= 0 && addr < PGSIZE)
   //  return -1;
   *ip = *(int*)(addr);
@@ -49,16 +40,12 @@ fetchstr(struct proc *p, uint addr, char **pp)
   //cprintf("[fetchint] addr=%x, p->tf->esp=%x\n", addr, p->tf->esp);
   char *s, *ep;
 
-  if(addr >= p->sz && addr < p->tf->esp)
+  if(addr >= p->sz && addr < (USERTOP - proc->stacksz))
     return -1;
-  if(addr >= USERTOP )
+//  if(addr >= p->elfsz && addr < (p->elfsz + PGSIZE));
+//    return -1;    
+  if(addr >= (USERTOP))
     return -1;
-	///if(addr == USERTOP && proc->pid != 1)
-	///		return -1;
-	
-	///if( (proc->tf->esp - addr ) > PGSIZE && proc->pid != 1)
-	///	return -1;
-	
   //if(addr >= 0 && addr < PGSIZE)
   //  return -1;
   *pp = (char*)addr;
@@ -86,18 +73,16 @@ argptr(int n, char **pp, int size)
   
   if(argint(n, &i) < 0)
     return -1;
-//  cprintf("[argptr] i=%x\n", i);
+ // cprintf("[argptr] i=0x%x, proc->elfsz=0x%x\n", i, proc->elfsz);
     
-  if(((uint)i >= proc->sz || (uint)i+size > proc->sz) && (uint)i < proc->tf->esp)
+  if(((uint)i >= proc->sz || (uint)i+size > proc->sz) && (uint)i < (USERTOP - proc->stacksz))
     return -1;
   if((uint)i >= 0 && (uint)i < PGSIZE)
     return -1;
-  if((uint)i >= USERTOP)
+  if(((uint)i >= proc->elfsz || (uint)i+size > proc->elfsz) && (uint)i < (proc->elfsz + PGSIZE))
+    return -1;   
+  if((uint)i > (USERTOP-size))
 		return -1;
-
-	//if( (uint)i < proc->pbase + PGSIZE && proc->pid > 1)
-//		return -1;
-
   *pp = (char*)i;
   return 0;
 }

@@ -109,22 +109,9 @@ growproc(int n)
   uint sz;
   
   sz = proc->sz;
-
   if(n > 0){
-
-		if((sz + n) > (proc->tf->esp - (proc->tf->esp % PGSIZE) - PGSIZE)) {
-			cprintf("heap hit the guard page\n");
+		if((sz + n) > (USERTOP - proc->stacksz - PGSIZE))
 			return -1;
-		}
-
-/*
-		if( (sz+n) > (proc->pbase - PGSIZE) ) 
-		{
-			cprintf("[growproc] heap hit guardpage at proc->pbase - PGSIZE\n");
-			cprintf("[growproc] proc->pbase at %x\n",proc->pbase);
-			return -1;
-		}			
-*/
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
   } else if(n < 0){
@@ -153,13 +140,15 @@ fork(void)
 
   // Copy process state from p.
   // This is where address space of the child is copied from address space of the parent?
-  if((np->pgdir = copyuvm(proc->pgdir, proc->sz, proc->tf->esp)) == 0){
+  if((np->pgdir = copyuvm(proc->pgdir, proc->sz, proc->elfsz, proc->stacksz)) == 0){
 	//if((np->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0){
 		kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
     return -1;
   }
+  np->stacksz = proc->stacksz;
+  np->elfsz = proc->elfsz;
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
@@ -295,6 +284,7 @@ scheduler(void)
 			proc = p;   
 			switchuvm(p);
       p->state = RUNNING;
+			//cprintf("[scheduler] p->tf->eax=%d\n", p->tf->eax);
       swtch(&cpu->scheduler, proc->context);
       switchkvm();
 
