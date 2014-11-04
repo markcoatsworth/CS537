@@ -58,10 +58,12 @@ void getargs(int argc, char *argv[])
 */
 void HttpConnectionHandler()
 {
+	// Set the thread index. This is only used for debug output.
 	int ThisThreadIndex = ThreadCounter++;
 	
 	printf("[HttpConnectionHandler-%d] thread started\n", ThisThreadIndex);
 
+	// Main thread loop
 	while(1)
 	{
 		printf("[HttpConnectionHandler-%d] requesting lock\n", ThisThreadIndex);
@@ -75,7 +77,9 @@ void HttpConnectionHandler()
 		//requestHandle(ConnectionSocket);
 		requestHandle(HttpConnections[ActiveConnection]);
 		Close(HttpConnections[ActiveConnection]);
-		ActiveConnection++;
+		
+		// Increment ActiveConnection, or reset it to 0 if it has reached the last buffer
+		ActiveConnection = (ActiveConnection < (NumBuffers - 1)) ? ActiveConnection + 1 : 0;
 		
 	}
 }
@@ -91,8 +95,12 @@ int main(int argc, char *argv[])
     int i;    
     struct sockaddr_in clientaddr;
     
-    // Initialize some global variables
-
+    // Set up locks
+	pthread_mutex_init(&ConnectionBufferLock, NULL);
+	if(pthread_mutex_lock(&ConnectionBufferLock) != 0)
+	{
+		printf("[server] unable to set the initial buffer lock\n");
+	}
 
 	// Verify + store command line arguments
     getargs(argc, argv);
