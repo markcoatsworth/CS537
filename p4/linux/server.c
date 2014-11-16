@@ -13,20 +13,8 @@
 
 
 /*
-**	HTTP connection struct
-*/
-/*
-typedef struct HttpConnection 
-{
-	int ConnectionSocket;
-}
-HttpConnection;
-*/
-
-/*
 **	Global variables: these will be shared between all threads and the main process
 */
-//HttpConnection *HttpConnectionBuffers;
 int ActiveConnection = 0;
 int *HttpConnections;
 int NumActiveConnections = 0;
@@ -37,7 +25,6 @@ int ThreadCounter = 0;
 pthread_t *ThreadPool;
 pthread_cond_t CondBufferLock;
 pthread_mutex_t MutexBufferLock;
-//pthread_mutex_t ConnectionBufferLock;
 
 
 /*
@@ -64,43 +51,28 @@ void HttpConnectionHandler()
 	// Set the thread index. This is only used for debug output.
 	int ThisThreadIndex = ThreadCounter++;
 	
-	printf("[HttpConnectionHandler-%d] thread started\n", ThisThreadIndex);
-
 	// Main thread loop
 	while(1)
 	{
-		printf("[HttpConnectionHandler-%d] requesting lock\n", ThisThreadIndex);
-		/*
-		if(pthread_mutex_lock(&ConnectionBufferLock) != 0)
-		{
-			printf("[HttpConnectionHandler-%d] unable to get lock\n", ThisThreadIndex);
-		}
-		*/
 		// Get the lock
 		pthread_mutex_lock(&MutexBufferLock);
 		
 		// Release the lock and put the thread to sleep
 		while(NumActiveConnections == 0)
 		{
-			printf("[HttpConnectionHandler-%d] no active connections, throw wait\n", ThisThreadIndex);
+			//printf("[HttpConnectionHandler-%d] no active connections, throw wait\n", ThisThreadIndex);
 			pthread_cond_wait(&CondBufferLock, &MutexBufferLock);
 		}
-		printf("[HttpConnectionHandler-%d] got an active connection!\n", ThisThreadIndex);
+		
+		// Now, assuming the mutex is locked, unlock it and handle the request
 		pthread_mutex_unlock(&MutexBufferLock);
-		
-		printf("[HttpConnectionHandler-%d] thread unlocked!\n", ThisThreadIndex);
-		
-		printf("[HttpConnectionHandler-%d] calling request handle on fd=%d...\n", ThisThreadIndex, HttpConnections[ActiveConnection]);
-		//requestHandle(ConnectionSocket);
+		//printf("[HttpConnectionHandler-%d] calling request handle on fd=%d...\n", ThisThreadIndex, HttpConnections[ActiveConnection]);
 		requestHandle(HttpConnections[ActiveConnection]);
 		Close(HttpConnections[ActiveConnection]);
 		
-		// Increment ActiveConnection, or reset it to 0 if it has reached the last buffer
+		// Set the active buffer connection, and adjust the condition variable
 		ActiveConnection = (ActiveConnection < (NumBuffers - 1)) ? ActiveConnection + 1 : 0;
 		NumActiveConnections--;
-		
-
-		
 	}
 }
 
@@ -115,29 +87,18 @@ int main(int argc, char *argv[])
     int i;    
     struct sockaddr_in clientaddr;
     
-    // Set up locks
-    /*
-	pthread_mutex_init(&ConnectionBufferLock, NULL);
-	if(pthread_mutex_lock(&ConnectionBufferLock) != 0)
-	{
-		printf("[server] unable to set the initial buffer lock\n");
-	}
-	*/
-
-	// Verify + store command line arguments
+  	// Verify + store command line arguments
     getargs(argc, argv);
 	printf("[server] Running with NumBuffers=%d, NumThreads=%d, PortNumber=%d\n", NumBuffers, NumThreads, PortNumber);
 
 	// Set up connection buffers
-	//HttpConnectionBuffers = (HttpConnectionBuffers*) malloc (sizeof(HttpConnectionBuffers*) * NumBuffers);
 	HttpConnections = (int *) malloc (sizeof(int*) * NumBuffers);
 
     // Set up the thread pool, and initialize all threads
     ThreadPool = (pthread_t*) malloc (sizeof(pthread_t*) * NumThreads);
     for(i = 0; i < NumThreads; i ++)
     {
-   		//printf("[server] creating new thread\n");
-    	if(pthread_create(&ThreadPool[i], NULL, &HttpConnectionHandler, NULL) != 0)
+   		if(pthread_create(&ThreadPool[i], NULL, &HttpConnectionHandler, NULL) != 0)
     	{
     		perror("Failed to create HTTP connection handler thread.\n");
     	}
@@ -149,38 +110,17 @@ int main(int argc, char *argv[])
     // Main server loop waiting for connections
     while (1) 
     {
-    	printf("[server] clientlen=%d\n", clientlen);
-		clientlen = sizeof(clientaddr);
-		printf("[server] waiting for connection...\n");
+    	// Wait for a client connection
+    	clientlen = sizeof(clientaddr);
 		ConnectionSocket = Accept(HttpListenSocket, (SA *)&clientaddr, (socklen_t *) &clientlen);
 	
-		// 
-		// CS537: In general, don't handle the request in the main thread.
-		// Save the relevant info in a buffer and have one of the worker threads 
-		// do the work.
-		// requestHandle(ConnectionSocket);
-
-		printf("[server] got a connection at fd=%d! saving connection data to buffer\n", ConnectionSocket);
+		// Once a connection comes in, add to the connections buffer and handle the locks
 		HttpConnections[ActiveConnection] = ConnectionSocket;
-		printf("[server] releasing lock\n");
+		//printf("[server] releasing lock\n");
 		pthread_mutex_lock(&MutexBufferLock);
 		NumActiveConnections++;
 		pthread_cond_signal(&CondBufferLock);
 		pthread_mutex_unlock(&MutexBufferLock);
-
-		/*
-		if(pthread_mutex_unlock(&ConnectionBufferLock) != 0)
-		{
-			printf("[server] unable to release lock\n");
-		}
-		*/		
-
     }
 
 }
-
-
-    
-
-
- 
