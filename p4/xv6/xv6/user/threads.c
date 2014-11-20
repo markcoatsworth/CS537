@@ -2,15 +2,21 @@
 #include "stat.h"
 #include "user.h"
 
-int stack[4096] __attribute__ ((aligned (4096)));
 int x = 0;
+//int stack[1024] __attribute__ ((aligned (4096)));
 
 int main(int argc, char *argv[]) 
 {
 	printf(1, "Process table:\n");
 	join();
-  
+	
+	int test = 666;
+	
+	int* stack;
+	stack = (int*)malloc(1024 * sizeof(int*));
+	
     //int tid = fork();
+    printf(1, "[threads] Calling clone, stack address=0x%x, test address=0x%x, x address=0x%x\n", stack, &test, &x);
   	int tid = clone(stack);
 	
 	printf(1, "\n\nProcess table after clone call:\n");

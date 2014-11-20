@@ -460,25 +460,14 @@ int sys_clone(void)
     	return -1;
     }
 	
-	// Make a copy of the parent process' stack in the location passed
-	NewStackData = (int*)NewStackAddress;
-	ParentStackData = (int*)(proc->sz - PGSIZE);
-	//cprintf("[sys_clone] NewStackData=0x%x, proc->sz=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->sz, PGSIZE, ParentStackData);
-	for(i = 0; i < PGSIZE/sizeof(int); i ++)
-	{
-		NewStackData[i] = ParentStackData[i];
-		//cprintf("[sys_clone] i=%d, &NewStackData[i]=0x%x, NewStackData[i]=%d\n", i, &NewStackData[i], NewStackData[i]);
-	}
-	
-  	// Now that we've copied the stack, allocate the new thread (process)
+  	// Allocate the new thread (process)
   	if((NewThread = allocproc()) == 0)
   	{
     	return -1;
     }
     
     // Debug: display old thread stack + base registers
-    cprintf("[sys_clone] Parent thread stack=0x%x, base=0x%x\n", proc->tf->esp, proc->tf->ebx);
-	cprintf("[sys_clone] proc->sz=0x%x\n", proc->sz);
+    cprintf("[sys_clone] proc: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", proc->sz, proc->tf->ebp, proc->tf->esp, proc->tf->eip);
   	
   	// Copy process state from p. 
   	// We'll need to change a few things to set up this new "process" as a thread.
@@ -495,6 +484,21 @@ int sys_clone(void)
   	NewThread->sz = proc->sz;
   	NewThread->parent = proc;
   	*NewThread->tf = *proc->tf;
+  	
+  	// Make a copy of the parent process stack in the location passed
+	NewStackData = (int*)NewStackAddress;
+	ParentStackData = (int*)(proc->tf->ebp - (proc->tf->ebp % PGSIZE));
+	//cprintf("[sys_clone] NewStackData=0x%x, proc->tf->ebp=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->tf->ebp, PGSIZE, ParentStackData);
+	for(i = 0; i < PGSIZE/sizeof(int); i ++)
+	{
+		NewStackData[i] = ParentStackData[i];
+		//cprintf("[sys_clone] i=%d, &ParentStackData[i]=0x%x, &NewStackData[i]=0x%x, NewStackData[i]=%d\n", i, &ParentStackData[i], &NewStackData[i], NewStackData[i]);
+	}
+	
+	// Set up the base + stack pointer registers
+	NewThread->tf->ebp = (uint)NewStackData + PGSIZE - 32;
+	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);//proc->tf->esp + (NewStackData - ParentStackData); 
+	cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp);
 
   	// Clear %eax so that clone returns 0 in the child.
   	NewThread->tf->eax = 0;
