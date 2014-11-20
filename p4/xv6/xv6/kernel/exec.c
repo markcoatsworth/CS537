@@ -44,7 +44,7 @@ exec(char *path, char **argv)
       goto bad;
     if(loaduvm(pgdir, (char*)ph.va, ip, ph.offset, ph.filesz) < 0)
       goto bad;
-    cprintf("[exec] Loading %s, sz=0x%x (base10: %d)\n", path, sz, sz);
+    //cprintf("[exec] Loading %s, sz=0x%x (base10: %d)\n", path, sz, sz);
   }
   iunlockput(ip);
   ip = 0;

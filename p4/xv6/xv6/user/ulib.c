@@ -102,4 +102,24 @@ memmove(void *vdst, void *vsrc, int n)
   while(n-- > 0)
     *dst++ = *src++;
   return vdst;
+}//ThreadStack = (int*)malloc(1024 * sizeof(int*));
+
+	printf(1, "[thread_create] called, &fn=0x%x, ThreadStack=0x%x\n", fn, &ThreadStack);
+
+
+	// Now call the clone function to start the new thread	
+	int NewID = clone(&ThreadStack);
+
+	// NewID will be 0 for the thread, and original PID for the parent process
+	if(NewID == 0)
+	{
+		printf(1, "[thread_create] Thread here\n");
+	}
+	else
+	{
+		printf(1, "[thread_create] Parent process here\n");
+	}
+
+	
+	return NewID;
 }

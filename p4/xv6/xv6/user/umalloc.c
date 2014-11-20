@@ -88,3 +88,44 @@ malloc(uint nbytes)
         return 0;
   }
 }
+
+
+// Wrap the clone function.
+// In the child, thread_create should call the function pointer, passing it the provided argument
+// When the provided function returns, thread_create should free the stack and call exit
+int thread_create(void (*fn) (void *), void *arg)
+{
+	// Allocate two pages of memory for the stack.
+  // We cannot guarantee this is page aligned, so need to grab some extra space.
+	// We'll align it to the pages during the clone() system call.
+	int* ThreadStack;
+	ThreadStack = (int*)malloc(2048 * sizeof(int*));
+	printf(1, "[thread_create] called, &fn=0x%x, ThreadStack=0x%x\n", fn, ThreadStack);
+
+	printf(1, "\n\n[thread_create] Process table before clone call:\n");
+	join();
+
+	// Now call the clone function to start the new thread	
+	int NewID = clone(ThreadStack);
+	printf(1, "[thread_create] NewID=%d\n", NewID);
+
+	printf(1, "\n\n[thread_create] Process table after clone call:\n");
+	join();
+
+
+
+	// NewID will be 0 for the thread, and original PID for the parent process
+	if(NewID == 0)
+	{
+		printf(1, "[thread_create] Thread here\n");
+		fn(arg);
+	}
+	else
+	{
+		printf(1, "[thread_create] Parent process here\n");
+
+	}
+
+	
+	return NewID;
+}

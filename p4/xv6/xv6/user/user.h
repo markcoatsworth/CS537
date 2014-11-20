@@ -26,7 +26,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 
-// Thread calls
+// Thread system calls
 int clone(void*);
 int lock(int*);
 int unlock(int*);
@@ -45,6 +45,7 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int thread_create(void (*fn) (void *), void *arg);
 
 #endif // _USER_H_
 

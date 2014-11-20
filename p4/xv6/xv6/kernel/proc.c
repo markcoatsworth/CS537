@@ -478,21 +478,21 @@ int sys_clone(void)
   	// Make a copy of the parent process stack in the location passed
 	NewStackData = (int*)NewStackAddress;
 	ParentStackData = (int*)(proc->tf->ebp - (proc->tf->ebp % PGSIZE));
-	//cprintf("[sys_clone] NewStackData=0x%x, proc->tf->ebp=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->tf->ebp, PGSIZE, ParentStackData);
+	cprintf("[sys_clone] NewStackData=0x%x, proc->tf->ebp=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->tf->ebp, PGSIZE, ParentStackData);
 	for(i = 0; i < PGSIZE/sizeof(int); i ++)
 	{
 		NewStackData[i] = ParentStackData[i];
 		//cprintf("[sys_clone] i=%d, &ParentStackData[i]=0x%x, &NewStackData[i]=0x%x, NewStackData[i]=%d\n", i, &ParentStackData[i], &NewStackData[i], NewStackData[i]);
 	}
 	
-	// Set up the stack base pointer. Not sure why it needs to start from 0x2 behind the end of page, but that's how the original esp is set up.
+	// Set up the stack base pointer. Not sure why it needs to start from 0x20 behind the end of page, but that's how the original esp is set up.
 	NewThread->tf->ebp = (uint)NewStackData + PGSIZE - 0x20;
 	
 	// Set up the stack pointer. It should point to the same stack offset as the parent process. 
 	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);
 	
 	// Debug: display new thread stack + base registers
-    cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp);
+    cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp, NewThread->tf->eip);
 
   	// Clear %eax so that clone returns 0 in the child.
   	NewThread->tf->eax = 0;
