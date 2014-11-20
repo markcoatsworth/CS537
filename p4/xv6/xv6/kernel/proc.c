@@ -469,17 +469,7 @@ int sys_clone(void)
     // Debug: display old thread stack + base registers
     cprintf("[sys_clone] proc: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", proc->sz, proc->tf->ebp, proc->tf->esp, proc->tf->eip);
   	
-  	// Copy process state from p. 
-  	// We'll need to change a few things to set up this new "process" as a thread.
-  	/*
-  	if((NewThread->pgdir = copyuvm(proc->pgdir, proc->sz)) == 0)
-  	{
-    	kfree(NewThread->kstack);
-    	NewThread->kstack = 0;
-    	NewThread->state = UNUSED;
-    	return -1;
-  	}
-  	*/
+  	// Copy process state from parent process. Thread should use the same pgdir address as parent. 
   	NewThread->pgdir = proc->pgdir;
   	NewThread->sz = proc->sz;
   	NewThread->parent = proc;
@@ -495,10 +485,14 @@ int sys_clone(void)
 		//cprintf("[sys_clone] i=%d, &ParentStackData[i]=0x%x, &NewStackData[i]=0x%x, NewStackData[i]=%d\n", i, &ParentStackData[i], &NewStackData[i], NewStackData[i]);
 	}
 	
-	// Set up the base + stack pointer registers
-	NewThread->tf->ebp = (uint)NewStackData + PGSIZE - 32;
-	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);//proc->tf->esp + (NewStackData - ParentStackData); 
-	cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp);
+	// Set up the stack base pointer. Not sure why it needs to start from 0x2 behind the end of page, but that's how the original esp is set up.
+	NewThread->tf->ebp = (uint)NewStackData + PGSIZE - 0x20;
+	
+	// Set up the stack pointer. It should point to the same stack offset as the parent process. 
+	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);
+	
+	// Debug: display new thread stack + base registers
+    cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp);
 
   	// Clear %eax so that clone returns 0 in the child.
   	NewThread->tf->eax = 0;
