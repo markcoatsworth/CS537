@@ -22,6 +22,8 @@ int main(int argc, char *argv[])
 	printf(1, "\n\nProcess table after clone call:\n");
 	join();
 	
+	printf(1, "[threads] tid=%d\n", tid);	
+	
   	if (tid < 0) 
   	{
     	printf(2, "error!\n");

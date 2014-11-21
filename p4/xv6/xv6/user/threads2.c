@@ -2,6 +2,15 @@
 #include "stat.h"
 #include "user.h"
 
+void nullfn(void* arg)
+{
+	while(1)
+	{
+		printf(1, "This is a dummy function! You should not be seeing this!!\n");
+		sleep(100);
+	}
+}
+
 void consumer(void* arg)
 {
 	while(1)

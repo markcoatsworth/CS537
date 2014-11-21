@@ -96,10 +96,10 @@ malloc(uint nbytes)
 int thread_create(void (*fn) (void *), void *arg)
 {
 	// Allocate two pages of memory for the stack.
-  // We cannot guarantee this is page aligned, so need to grab some extra space.
+	// We cannot guarantee this is page aligned, so need to grab some extra space.
 	// We'll align it to the pages during the clone() system call.
 	int* ThreadStack;
-	ThreadStack = (int*)malloc(2048 * sizeof(int*));
+	ThreadStack = (int*)malloc(1024 * sizeof(int*));
 	printf(1, "[thread_create] called, &fn=0x%x, ThreadStack=0x%x\n", fn, ThreadStack);
 
 	printf(1, "\n\n[thread_create] Process table before clone call:\n");
@@ -125,7 +125,7 @@ int thread_create(void (*fn) (void *), void *arg)
 		printf(1, "[thread_create] Parent process here\n");
 
 	}
-
+	
 	
 	return NewID;
 }

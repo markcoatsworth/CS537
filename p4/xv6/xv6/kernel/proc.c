@@ -486,7 +486,7 @@ int sys_clone(void)
 	}
 	
 	// Set up the stack base pointer. Not sure why it needs to start from 0x20 behind the end of page, but that's how the original esp is set up.
-	NewThread->tf->ebp = (uint)NewStackData + PGSIZE - 0x20;
+	NewThread->tf->ebp = (uint)NewStackData + (proc->tf->ebp % PGSIZE);//PGSIZE - 0x20;
 	
 	// Set up the stack pointer. It should point to the same stack offset as the parent process. 
 	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);
