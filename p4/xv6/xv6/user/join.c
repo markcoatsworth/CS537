@@ -31,13 +31,15 @@ main(int argc, char *argv[])
      stack = stack + (4096 - (uint)stack % PGSIZE);
 
    int arg = 42;
+   printf(1, "[join(%d)] calling clone...\n", getpid());
    int clone_pid = clone(stack);
    if (clone_pid == 0) {
      worker(&arg);
    }
    assert(clone_pid > 0);
-
+	printf(1, "[join(%d)] calling join...\n", getpid());
    int join_pid = join();
+   printf(1, "[join(%d)] join_pid=%d, clone_pid=%d\n", getpid(), join_pid, clone_pid);
    assert(join_pid == clone_pid);
    assert(global == 2);
 
@@ -47,9 +49,11 @@ main(int argc, char *argv[])
 
 void
 worker(void *arg_ptr) {
+	printf(1, "[worker(%d)] thread started\n", getpid());
    int arg = *(int*)arg_ptr;
    assert(arg == 42);
    assert(global == 1);
    global++;
+   	printf(1, "[worker(%d)] thread exiting\n", getpid());
    exit();
 }

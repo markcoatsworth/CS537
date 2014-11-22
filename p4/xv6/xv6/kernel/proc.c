@@ -445,7 +445,7 @@ procdump(void)
 }
 
 // Initialize a thread
-// Returns 0 if successful, or -1 on failure
+// Returns the thread ID (PID) if successful, or -1 on failure
 int sys_clone(void)
 {
  	int i, NewThreadID;
@@ -520,12 +520,7 @@ int sys_lock(void)
 
 int sys_unlock(void)
 {
-  return 0;
-}
-
-int sys_join(void)
-{
-	// For now, join is just a debug function that prints out the ptable
+  	// For now, join is just a debug function that prints out the ptable
 	struct proc* p;
 	cprintf("PID\tNAME\tSTATE\tPARENT\tPGDIR\n");
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -538,7 +533,8 @@ int sys_join(void)
 	return 0;
 }
 
-int join(void)
+
+int sys_join(void)
 {
 	struct proc *p;
 	int havekids, pid;
@@ -546,23 +542,25 @@ int join(void)
 	acquire(&ptable.lock);
 	for(;;)
 	{
-		// Scan through table looking for zombie children.
+		// Scan through table looking for zombie threads.
 		havekids = 0;
 		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
 		{
-			if(p->parent != proc)
+			if(p->parent != proc || p->pgdir != proc->pgdir)
 			{
 				continue;
 			}
+			cprintf("[sys_join] found a child of proc, p->pid=%d, p->name=%s, p->state=%d\n", p->pid, p->name, p->state);
 			havekids = 1;
 			if(p->state == ZOMBIE)
 			{
+				cprintf("[sys_join] found a zombie process, p->pid=%d\n", p->pid);
 				// Found one.
 				pid = p->pid;
 				kfree(p->kstack);
 				p->kstack = 0;
 				// Need to be really careful about when we call this because other threads may be using the pgdir
-				freevm(p->pgdir);
+				//freevm(p->pgdir);
 				p->state = UNUSED;
 				p->pid = 0;
 				p->parent = 0;
@@ -584,4 +582,3 @@ int join(void)
 		sleep(proc, &ptable.lock);  //DOC: wait-sleep
 	}
 }
-
