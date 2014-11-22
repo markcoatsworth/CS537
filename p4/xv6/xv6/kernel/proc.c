@@ -218,6 +218,9 @@ wait(void)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->parent != proc)
         continue;
+      // Do not wait for threads! Only processes.
+      if(p->pgdir == proc->pgdir)
+      	continue;
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
