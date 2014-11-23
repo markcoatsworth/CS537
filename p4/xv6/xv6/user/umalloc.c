@@ -103,26 +103,27 @@ int thread_create(void (*fn) (void *), void *arg)
 	printf(1, "[thread_create] called, &fn=0x%x, ThreadStack=0x%x\n", fn, ThreadStack);
 
 	printf(1, "\n\n[thread_create] Process table before clone call:\n");
-	join();
+	unlock(0);
 
 	// Now call the clone function to start the new thread	
 	int NewID = clone(ThreadStack);
 	printf(1, "[thread_create] NewID=%d\n", NewID);
 
 	printf(1, "\n\n[thread_create] Process table after clone call:\n");
-	join();
+	unlock(0);
 
 
 
 	// NewID will be 0 for the thread, and original PID for the parent process
 	if(NewID == 0)
 	{
-		printf(1, "[thread_create] Thread here\n");
+		printf(1, "[thread_create(%d)] Thread here\n", getpid());
 		fn(arg);
+		exit();
 	}
 	else
 	{
-		printf(1, "[thread_create] Parent process here\n");
+		printf(1, "[thread_create(%d)] Parent process here\n", getpid());
 
 	}
 	

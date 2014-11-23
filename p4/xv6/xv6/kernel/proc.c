@@ -488,7 +488,8 @@ int sys_clone(void)
 		//cprintf("[sys_clone] i=%d, &ParentStackData[i]=0x%x, &NewStackData[i]=0x%x, NewStackData[i]=%d\n", i, &ParentStackData[i], &NewStackData[i], NewStackData[i]);
 	}
 	
-	// Set up the stack base pointer. Not sure why it needs to start from 0x20 behind the end of page, but that's how the original esp is set up.
+	// Set up the stack base pointer. 
+	// It does not start right at the end of the page, so set it up at the same offset as the parent process.
 	NewThread->tf->ebp = (uint)NewStackData + (proc->tf->ebp % PGSIZE);//PGSIZE - 0x20;
 	
 	// Set up the stack pointer. It should point to the same stack offset as the parent process. 
@@ -553,11 +554,11 @@ int sys_join(void)
 			{
 				continue;
 			}
-			cprintf("[sys_join] found a child of proc, p->pid=%d, p->name=%s, p->state=%d\n", p->pid, p->name, p->state);
+			cprintf("[sys_join(%d)] found a child of proc, p->pid=%d, p->name=%s, p->state=%d\n", proc->pid, p->pid, p->name, p->state);
 			havekids = 1;
 			if(p->state == ZOMBIE)
 			{
-				cprintf("[sys_join] found a zombie process, p->pid=%d\n", p->pid);
+				cprintf("[sys_join(%d)] found a zombie process, p->pid=%d\n", proc->pid, p->pid);
 				// Found one.
 				pid = p->pid;
 				kfree(p->kstack);
@@ -570,6 +571,7 @@ int sys_join(void)
 				p->name[0] = 0;
 				p->killed = 0;
 				release(&ptable.lock);
+				cprintf("[sys_join(%d)] killed zombie process, returning pid=%d\n", proc->pid, pid);
 				return pid;
 			}
 		}
