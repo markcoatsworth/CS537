@@ -470,7 +470,7 @@ int sys_clone(void)
     }
     
     // Debug: display old thread stack + base registers
-    cprintf("[sys_clone] proc: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", proc->sz, proc->tf->ebp, proc->tf->esp, proc->tf->eip);
+    //cprintf("[sys_clone] proc: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", proc->sz, proc->tf->ebp, proc->tf->esp, proc->tf->eip);
   	
   	// Copy process state from parent process. Thread should use the same pgdir address as parent. 
   	NewThread->pgdir = proc->pgdir;
@@ -481,7 +481,7 @@ int sys_clone(void)
   	// Make a copy of the parent process stack in the location passed
 	NewStackData = (int*)NewStackAddress;
 	ParentStackData = (int*)(proc->tf->ebp - (proc->tf->ebp % PGSIZE));
-	cprintf("[sys_clone] NewStackData=0x%x, proc->tf->ebp=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->tf->ebp, PGSIZE, ParentStackData);
+	//cprintf("[sys_clone] NewStackData=0x%x, proc->tf->ebp=0x%x, PGSIZE=0x%x, ParentStackData=0x%x\n", NewStackData, proc->tf->ebp, PGSIZE, ParentStackData);
 	for(i = 0; i < PGSIZE/sizeof(int); i ++)
 	{
 		NewStackData[i] = ParentStackData[i];
@@ -496,7 +496,7 @@ int sys_clone(void)
 	NewThread->tf->esp = NewThread->tf->ebp - (proc->tf->ebp - proc->tf->esp);
 	
 	// Debug: display new thread stack + base registers
-    cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp, NewThread->tf->eip);
+    //cprintf("[sys_clone] NewThread: sz=0x%x, ebp=0x%x, esp=0x%x, eip=0x%x\n", NewThread->sz, NewThread->tf->ebp, NewThread->tf->esp, NewThread->tf->eip);
 
   	// Clear %eax so that clone returns 0 in the child.
   	NewThread->tf->eax = 0;
@@ -519,22 +519,41 @@ int sys_clone(void)
 
 int sys_lock(void)
 {
-  return 0;
+	int Lock;
+
+	// Get the lock pointed to by the void pointer argument.
+  	if(argint(0, &Lock) < 0)
+  	{
+    	return -1;
+    }
+	//cprintf("[sys_lock] Requesting XCHG, Lock=%d\n", Lock);
+	
+	if(Lock < 0 || Lock > 1)
+	{
+		Lock = 0;
+	}
+	
+  	while(xchg((unsigned int*)&Lock, 1) != 0)
+  	{
+  		; // spin! waste cpu cycles!
+  	}
+    //cprintf("[sys_lock] Acquired lock! Lock=%d\n", Lock);
+    return 0;
 }
 
 int sys_unlock(void)
 {
-  	// For now, join is just a debug function that prints out the ptable
-	struct proc* p;
-	cprintf("PID\tNAME\tSTATE\tPARENT\tPGDIR\n");
-	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-	{
-		if(p->pid != 0)
-		{
-			cprintf("%d\t%s\t%d\t%d\t%x\n", p->pid, p->name, p->state, p->parent->pid, p->pgdir);
-		}
-	}
-	return 0;
+	int Lock;
+
+	// Get the lock pointed to by the void pointer argument.
+  	if(argint(0, &Lock) < 0)
+  	{
+    	return -1;
+    }
+    
+    xchg((unsigned int*)&Lock, 0);
+    
+    return 0;
 }
 
 
@@ -554,7 +573,7 @@ int sys_join(void)
 			{
 				continue;
 			}
-			cprintf("[sys_join(%d)] found a child of proc, p->pid=%d, p->name=%s, p->state=%d\n", proc->pid, p->pid, p->name, p->state);
+			cprintf("[sys_join(%d)] found a child of proc, p->pid=%d, p->name=%s, p->state=%d (zombie=%d)\n", proc->pid, p->pid, p->name, p->state, ZOMBIE);
 			havekids = 1;
 			if(p->state == ZOMBIE)
 			{

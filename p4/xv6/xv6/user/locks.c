@@ -31,12 +31,16 @@ main(int argc, char *argv[])
 
    int i;
    for (i = 0; i < num_threads; i++) {
+   		printf(1, "[locks] creating thread %d\n", i);
       int thread_pid = thread_create(worker, 0);
+      printf(1, "[locks] thread_pid=%d\n", thread_pid);
       assert(thread_pid > 0);
    }
 
    for (i = 0; i < num_threads; i++) {
+   		printf(1, "[locks] joining thread %d\n", i);   
       int join_pid = join();
+      printf(1, "[locks] join_pid=%d\n", join_pid);
       assert(join_pid > 0);
    }
 
@@ -48,14 +52,18 @@ main(int argc, char *argv[])
 
 void
 worker(void *arg_ptr) {
+	printf(1, "[worker(%d)] starting...\n", getpid());
    int i, j, tmp;
    for (i = 0; i < loops; i++) {
+	//printf(1, "[worker(%d)] requesting lock\n", getpid());
       lock(&locks);
       tmp = global;
       for(j = 0; j < 50; j++); // take some time
       global = tmp + 1;
+	//printf(1, "[worker(%d)] releasing lock\n", getpid());
       unlock(&locks);
    }
+	printf(1, "[worker(%d)] ending...\n", getpid());   
    return;
 }
 
