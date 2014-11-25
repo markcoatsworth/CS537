@@ -13,6 +13,9 @@ struct {
 
 static struct proc *initproc;
 
+uint ThreadChannel;
+//static struct spinlock ThreadLock;
+
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -335,6 +338,8 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
+	//cprintf("[sleep(%d)] requesting sleep on chan=%d, lk=0x%x\n", proc->pid, chan, lk);
+	
   if(proc == 0)
     panic("sleep");
 
@@ -355,6 +360,7 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   proc->chan = chan;
   proc->state = SLEEPING;
+  
   sched();
 
   // Tidy up.
@@ -372,11 +378,15 @@ sleep(void *chan, struct spinlock *lk)
 static void
 wakeup1(void *chan)
 {
+	//cprintf("[wakeup1] waking up processes on chan=%d\n", chan);
   struct proc *p;
-
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+      {
+      	//cprintf("[wakeup1] waking up p->pid=%d, p->chan=%d, chan=%d\n", p->pid, p->chan, chan);
+   
+      	p->state = RUNNABLE;
+      }
 }
 
 // Wake up all processes sleeping on chan.
@@ -519,40 +529,44 @@ int sys_clone(void)
 
 int sys_lock(void)
 {
-	int Lock;
+	int LockAddress;
 
-	// Get the lock pointed to by the void pointer argument.
-  	if(argint(0, &Lock) < 0)
+	// Get the lock address pointed to by the void pointer argument.
+  	if(argint(0, &LockAddress) < 0)
   	{
     	return -1;
     }
-	//cprintf("[sys_lock] Requesting XCHG, Lock=%d\n", Lock);
-	
-	if(Lock < 0 || Lock > 1)
-	{
-		Lock = 0;
-	}
-	
-  	while(xchg((unsigned int*)&Lock, 1) != 0)
+    
+    //cprintf("[sys_lock] getting lock at addr=0x%x\n", LockAddress);
+  	/*
+  	while(xchg((unsigned int*)LockAddress, 1) != 0)
   	{
-  		; // spin! waste cpu cycles!
+  		cprintf("[sys_lock(%d)] requesting sleep, ThreadChannel=%d, &ThreadChannel=%d...\n", proc->pid, ThreadChannel, &ThreadChannel);
+		acquire(&ThreadLock);
+  		sleep(&ThreadChannel, &ThreadLock);
   	}
-    //cprintf("[sys_lock] Acquired lock! Lock=%d\n", Lock);
+    */
+    while(xchg((unsigned int*)LockAddress, 1) != 0)
+    {
+    	;
+    }
     return 0;
 }
 
 int sys_unlock(void)
 {
-	int Lock;
+	int LockAddress;
 
-	// Get the lock pointed to by the void pointer argument.
-  	if(argint(0, &Lock) < 0)
+	// Get the lock address pointed to by the void pointer argument.
+  	if(argint(0, &LockAddress) < 0)
   	{
     	return -1;
     }
     
-    xchg((unsigned int*)&Lock, 0);
-    
+    xchg((unsigned int*)LockAddress, 0);
+    /*
+    wakeup(&ThreadChannel);
+    */
     return 0;
 }
 
@@ -573,11 +587,11 @@ int sys_join(void)
 			{
 				continue;
 			}
-			cprintf("[sys_join(%d)] found a child of proc, p->pid=%d, p->name=%s, p->state=%d (zombie=%d)\n", proc->pid, p->pid, p->name, p->state, ZOMBIE);
+			//cprintf("[sys_join(%d)] found a child of proc, p->pid=%d, p->name=%s, p->state=%d (zombie=%d)\n", proc->pid, p->pid, p->name, p->state, ZOMBIE);
 			havekids = 1;
 			if(p->state == ZOMBIE)
 			{
-				cprintf("[sys_join(%d)] found a zombie process, p->pid=%d\n", proc->pid, p->pid);
+				//cprintf("[sys_join(%d)] found a zombie process, p->pid=%d\n", proc->pid, p->pid);
 				// Found one.
 				pid = p->pid;
 				kfree(p->kstack);
@@ -590,7 +604,7 @@ int sys_join(void)
 				p->name[0] = 0;
 				p->killed = 0;
 				release(&ptable.lock);
-				cprintf("[sys_join(%d)] killed zombie process, returning pid=%d\n", proc->pid, pid);
+				//cprintf("[sys_join(%d)] killed zombie process, returning pid=%d\n", proc->pid, pid);
 				return pid;
 			}
 		}

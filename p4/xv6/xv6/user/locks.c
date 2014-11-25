@@ -31,19 +31,19 @@ main(int argc, char *argv[])
 
    int i;
    for (i = 0; i < num_threads; i++) {
-   		printf(1, "[locks] creating thread %d\n", i);
+   		//printf(1, "[locks] creating thread %d\n", i);
       int thread_pid = thread_create(worker, 0);
-      printf(1, "[locks] thread_pid=%d\n", thread_pid);
+      //xprintf(1, "[locks] thread_pid=%d\n", thread_pid);
       assert(thread_pid > 0);
    }
 
    for (i = 0; i < num_threads; i++) {
-   		printf(1, "[locks] joining thread %d\n", i);   
+   		//printf(1, "[locks] joining thread %d\n", i);   
       int join_pid = join();
-      printf(1, "[locks] join_pid=%d\n", join_pid);
+      //printf(1, "[locks] join_pid=%d\n", join_pid);
       assert(join_pid > 0);
    }
-
+	//printf(1, "[locks] global=%d, num_threads=%d, loops=%d\n", global, num_threads, loops);
    assert(global == num_threads * loops);
 
    printf(1, "TEST PASSED\n");
@@ -52,18 +52,19 @@ main(int argc, char *argv[])
 
 void
 worker(void *arg_ptr) {
-	printf(1, "[worker(%d)] starting...\n", getpid());
+	//printf(1, "[worker(%d)] starting...\n", getpid());
    int i, j, tmp;
    for (i = 0; i < loops; i++) {
-	//printf(1, "[worker(%d)] requesting lock\n", getpid());
+	  //printf(1, "[worker(%d)] requesting lock with locks=%d, &lock=0x%x\n", getpid(), locks, &locks);
       lock(&locks);
+      //printf(1, "[worker(%d)] entering critical section!\n", getpid());
       tmp = global;
       for(j = 0; j < 50; j++); // take some time
       global = tmp + 1;
-	//printf(1, "[worker(%d)] releasing lock\n", getpid());
+	  //printf(1, "[worker(%d)] releasing lock\n", getpid());
       unlock(&locks);
    }
-	printf(1, "[worker(%d)] ending...\n", getpid());   
+	//printf(1, "[worker(%d)] ending, global=%d...\n", getpid(), global);   
    return;
 }
 
