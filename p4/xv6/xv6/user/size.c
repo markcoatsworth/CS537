@@ -53,7 +53,7 @@ main(int argc, char *argv[])
    global = 0;
    sbrk(10000);
    size = (unsigned int)sbrk(0);
-   printf(1, "parent (after 10000): %d\n", size);
+   //printf(1, "[size(%d)] parent (after 10000): %d\n", getpid(), size);
    unlock(&lock1);
 
    while (global < num_threads) {
@@ -69,14 +69,17 @@ main(int argc, char *argv[])
 
 void
 worker(void *arg_ptr) {
+	//printf(1, "[worker(%d)] starting working thread, requesting lock1\n", getpid());
    lock(&lock1);
-   printf(1, "child: %d\n", (unsigned int)sbrk(0));
+	//printf(1, "[worker(%d)] got lock\n", getpid());
+   //printf(1, "[worker(%d)] child: %d\n", getpid(), (unsigned int)sbrk(0));
    assert((unsigned int)sbrk(0) == size);
    global++;
+	//printf(1, "[worker(%d)] releasing lock1\n", getpid());   
    unlock(&lock1);
 
    lock(&lock2);
-   printf(1, "child (after 10000): %d\n", (unsigned int)sbrk(0));
+   //printf(1, "child (after 10000): %d\n", (unsigned int)sbrk(0));
    assert((unsigned int)sbrk(0) == size);
    global++;
    unlock(&lock2);

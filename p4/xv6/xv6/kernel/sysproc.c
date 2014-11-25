@@ -50,8 +50,10 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = proc->sz;
+  //cprintf("[sys_sbrk] called for proc=%d, n=%d, proc->pgdir=0x%x, proc->sz=0x%x\n", proc->pid, n, proc->pgdir, proc->sz);
   if(growproc(n) < 0)
     return -1;
+  //cprintf("[sys_sbrk] returning, proc=%d, n=%d, proc->pgdir=0x%x, proc->sz=0x%x\n", proc->pid, n, proc->pgdir, proc->sz);    
   return addr;
 }
 

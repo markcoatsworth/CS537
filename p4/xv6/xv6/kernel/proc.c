@@ -14,7 +14,7 @@ struct {
 static struct proc *initproc;
 
 uint ThreadChannel;
-//static struct spinlock ThreadLock;
+static struct spinlock ThreadLock;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -26,6 +26,7 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  initlock(&ThreadLock, "threadlock");
 }
 
 // Look in the process table for an UNUSED proc.
@@ -112,6 +113,8 @@ growproc(int n)
 {
   uint sz;
   
+  acquire(&ThreadLock);
+  
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
@@ -122,6 +125,16 @@ growproc(int n)
   }
   proc->sz = sz;
   switchuvm(proc);
+  
+  // Now update the sz variable for all other processes sharing this address space
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if(p->pgdir == proc->pgdir && p != proc) {
+		p->sz = proc->sz;
+      }
+  }
+  
+  release(&ThreadLock);
   return 0;
 }
 
@@ -537,19 +550,12 @@ int sys_lock(void)
     	return -1;
     }
     
-    //cprintf("[sys_lock] getting lock at addr=0x%x\n", LockAddress);
-  	/*
-  	while(xchg((unsigned int*)LockAddress, 1) != 0)
-  	{
-  		cprintf("[sys_lock(%d)] requesting sleep, ThreadChannel=%d, &ThreadChannel=%d...\n", proc->pid, ThreadChannel, &ThreadChannel);
-		acquire(&ThreadLock);
-  		sleep(&ThreadChannel, &ThreadLock);
-  	}
-    */
+  	// Spin! Do nothing! Really we should be going to sleep, but I just can't that to work...
     while(xchg((unsigned int*)LockAddress, 1) != 0)
     {
     	;
     }
+
     return 0;
 }
 
@@ -564,9 +570,7 @@ int sys_unlock(void)
     }
     
     xchg((unsigned int*)LockAddress, 0);
-    /*
-    wakeup(&ThreadChannel);
-    */
+    
     return 0;
 }
 
