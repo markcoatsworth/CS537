@@ -113,7 +113,7 @@ growproc(int n)
 {
   uint sz;
   
-  acquire(&ThreadLock);
+  
   
   sz = proc->sz;
   if(n > 0){
@@ -126,15 +126,17 @@ growproc(int n)
   proc->sz = sz;
   switchuvm(proc);
   
+  acquire(&ptable.lock);
   // Now update the sz variable for all other processes sharing this address space
+  
   struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if(p->pgdir == proc->pgdir && p != proc) {
 		p->sz = proc->sz;
       }
   }
-  
-  release(&ThreadLock);
+ 
+  release(&ptable.lock);
   return 0;
 }
 
