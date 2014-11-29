@@ -36,24 +36,3 @@ int main(int argc, char *argv[])
     
     // Open the server on the specified port
     UDP_Open(PortNumber);
-    
-    // Open the file system image. If it does not exist, create it and initialize it.
-    FileSystemDescriptor = open(FileSystemImageFile, O_RDWR, S_IRWXU | S_IRUSR);
-    if(FileSystemDescriptor < 0)
-    {
-    	printf("[server] File system image does not exist, creating it\n");
-    	FileSystemDescriptor = open(FileSystemImageFile, O_RDWR | O_CREAT, S_IRWXU | S_IRUSR);
-    	printf("[server] Initializing file system image ...\n");
-    	
-    	
-    }
-    
-    // Enter the main server loop
-    while(1)
-    {
-    	UDP_Read(
-    }
-	
-	
-	return 0;
-}

@@ -1,4 +1,7 @@
-all: server
+all: server client
+
+client: client.c libmfs.so
+	gcc -lmfs -L . -o client client.c -Wall -Werror
 
 server: server.c libmfs.so
 	gcc -lmfs -L . -o server server.c -Wall -Werror
