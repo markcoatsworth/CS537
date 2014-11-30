@@ -18,7 +18,7 @@ void getargs(int argc, char *argv[])
 {
     if (argc != 3) 
     {
-		fprintf(stderr, "Usage: server [portnum] [file-system-image]\n", argv[0]);
+		fprintf(stderr, "Usage: server [portnum] [file-system-image]\n");
 		exit(1);
     }
     PortNumber = atoi(argv[1]);
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     getargs(argc, argv);
     
     // Open the server on the specified port
-    UDP_Open(PortNumber);
+    //UDP_Open(PortNumber);
     
     // Open the file system image. If it does not exist, create it and initialize it.
     FileSystemDescriptor = open(FileSystemImageFile, O_RDWR, S_IRWXU | S_IRUSR);
@@ -49,11 +49,12 @@ int main(int argc, char *argv[])
     }
     
     // Enter the main server loop
+    /*
     while(1)
     {
     	UDP_Read(
     }
-	
+	*/
 	
 	return 0;
 }

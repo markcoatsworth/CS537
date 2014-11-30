@@ -17,8 +17,8 @@ typedef struct __MFS_Stat_t {
 typedef struct __MFS_Inode_t {
     int type;   // MFS_DIRECTORY or MFS_REGULAR
     int size;   // bytes
-    uint *dataptr[14];
-} MFS_Stat_t;
+    void *dataptr[14];
+} MFS_Inode_t;
 
 typedef struct __MFS_DirEnt_t {
     char name[60];  // up to 60 bytes of name in directory (including \0)

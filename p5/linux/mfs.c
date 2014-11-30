@@ -1,17 +1,18 @@
 #include <stdio.h>
 
 #include "mfs.h"
+#include "udp.h"
 
 /*
 **	Global variables
 */
 
-int ServerSocket;
+//int ServerSocket;
 
 int MFS_Init(char *hostname, int port)
 {
 	printf("[MFS_Init]\n");
-	ServerSocket = UDP_Open(port);
+	//ServerSocket = UDP_Open(port);
 	
 	return 0;
 }

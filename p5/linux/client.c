@@ -18,7 +18,7 @@ void getargs(int argc, char *argv[])
 {
     if (argc != 3) 
     {
-		fprintf(stderr, "Usage: server [portnum] [file-system-image]\n", argv[0]);
+		fprintf(stderr, "Usage: server [portnum] [file-system-image]\n");
 		exit(1);
     }
     PortNumber = atoi(argv[1]);
@@ -29,10 +29,13 @@ void getargs(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	// Define local variables
-	int FileSystemDescriptor;
+	//int FileSystemDescriptor;
 	
 	// Verify + store command line arguments
     getargs(argc, argv);
     
     // Open the server on the specified port
-    UDP_Open(PortNumber);
+    //UDP_Open(PortNumber);
+    
+    return 0;
+}
