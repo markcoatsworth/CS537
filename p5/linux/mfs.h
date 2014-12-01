@@ -7,6 +7,7 @@
 #define MFS_BLOCK_SIZE   (4096)
 
 #define MFS_NUM_INODES	(64)
+#define MFS_NUM_BLOCKS	(1024)
 
 typedef struct __MFS_Stat_t {
     int type;   // MFS_DIRECTORY or MFS_REGULAR
@@ -17,7 +18,7 @@ typedef struct __MFS_Stat_t {
 typedef struct __MFS_Inode_t {
     int type;   // MFS_DIRECTORY or MFS_REGULAR
     int size;   // bytes
-    void *dataptr[14];
+    int dataptr[14];
 } MFS_Inode_t;
 
 typedef struct __MFS_DirEnt_t {
