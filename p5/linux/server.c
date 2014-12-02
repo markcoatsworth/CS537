@@ -11,7 +11,7 @@
 int FileSystemInitialize();
 response ServerInit();
 response ServerLookup(int pinum, char *name);
-response ServerStat(int inum, MFS_Stat_t *m);
+response ServerStat(int inum);
 response ServerWrite(int inum, char *buffer, int block);
 response ServerRead(int inum, char *buffer, int block);
 response ServerCreat(int pinum, int type, char *name);
@@ -41,7 +41,9 @@ void getargs(int argc, char *argv[])
     FileSystemImageFile = argv[2];
 }
 
-
+/*
+**	Main function
+*/
 int main(int argc, char *argv[])
 {
 	// Define local variables
@@ -91,6 +93,7 @@ int main(int argc, char *argv[])
     			break;
     		case 2: // STAT
     			printf("[server] Received STAT message\n");
+    			OutgoingResponse = ServerStat(IncomingRequest.inum);
     			break;
     		case 3: // WRITE
     			printf("[server] Received WRITE message\n");
@@ -121,6 +124,9 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/*
+**	Initializes an empty file system with a basic root directory
+*/
 int FileSystemInitialize()
 {
 	// Create data structures for the empty file system
@@ -168,12 +174,18 @@ int FileSystemInitialize()
 	return 0;
 }
 
+/*
+**	Initializes the server
+*/
 response ServerInit()
 {
 	response ResponseMessage;
 	return ResponseMessage;
 }
 
+/*
+**	Handles the MFS_Lookup request.
+*/
 response ServerLookup(int pinum, char *name)
 {
 	// Local variables
@@ -209,10 +221,35 @@ response ServerLookup(int pinum, char *name)
 	return ResponseMessage;
 }
 
-response ServerStat(int inum, MFS_Stat_t *m)
+/*
+**	Handles the MFS_Stat request.
+*/
+response ServerStat(int inum)
 {
+	// Local variables
 	response ResponseMessage;
+	struct dinode Inodes[IPB];
+	
+	// Retrieve the requested directory inode
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	// Make sure the inode requested actually exists
+	if(inum > 0 && inum < IPB)
+	{
+		if(Inodes[inum].type > 0)
+		{
+			ResponseMessage.rc = 0;
+			ResponseMessage.stat.type = Inodes[inum].type;
+			ResponseMessage.stat.size = Inodes[inum].size;
+			return ResponseMessage;					
+		}
+	}
+			
+	// If no matching entry was found, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
+
 }
 
 response ServerWrite(int inum, char *buffer, int block)
