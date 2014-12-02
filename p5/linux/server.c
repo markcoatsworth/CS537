@@ -9,6 +9,14 @@
 */
 
 int FileSystemInitialize(int _fsfd);
+int ServerInit();
+int ServerLookup(int pinum, char *name);
+int ServerStat(int inum, MFS_Stat_t *m);
+int ServerWrite(int inum, char *buffer, int block);
+int ServerRead(int inum, char *buffer, int block);
+int ServerCreat(int pinum, int type, char *name);
+int ServerUnlink(int pinum, char *name);
+int ServerShutdown();
 
 /*
 **	Global variables
@@ -18,7 +26,7 @@ char *FileSystemImageFile;
 int PortNumber;
 
 /*
-**	Get command line arguments and save them to relevant pointers. Exit if any problems.
+**	Get command line arguments and save them to relevant global variables. Exit if any problems.
 */
 void getargs(int argc, char *argv[])
 {
@@ -35,10 +43,10 @@ void getargs(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	// Define local variables
-	char *IncomingMessageBuffer = (char*)malloc(100 * sizeof(char));
 	int FileSystemDescriptor;
 	int SocketDescriptor;
-   	struct sockaddr_in UDPSocket;	
+   	message IncomingRequest;	
+   	struct sockaddr_in UDPSocket;
 	
 	// Verify + store command line arguments
     getargs(argc, argv);
@@ -67,8 +75,40 @@ int main(int argc, char *argv[])
 	printf("[server] Started UDP file system server\n");
     while(1)
     {
-    	int rc = UDP_Read(SocketDescriptor, &UDPSocket, IncomingMessageBuffer, 100);
-    	printf("[server] Received data, rc=%d, SocketData=%s\n", rc, IncomingMessageBuffer);
+    	int BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&IncomingRequest, sizeof(message));
+    	
+    	printf("[server] Received data, BytesReceived=%d, IncomingRequest.RequestType=%d\n", BytesReceived, IncomingRequest.type);
+    	switch(IncomingRequest.type)
+    	{
+    		case 0: // INIT
+    			printf("[server] Received INIT message\n");
+    			break;
+    		case 1: // LOOKUP
+    			printf("[server] Received LOOKUP message\n");
+    			break;
+    		case 2: // STAT
+    			printf("[server] Received STAT message\n");
+    			break;
+    		case 3: // WRITE
+    			printf("[server] Received WRITE message\n");
+    			break;
+    		case 4: // READ
+    			printf("[server] Received READ message\n");
+    			break;
+    		case 5: // CREAT
+    			printf("[server] Received CREAT message\n");
+    			break;
+    		case 6: // UNLINK
+    			printf("[server] Received UNLINK message\n");
+    			break;
+    		case 7: // SHUTDOWN
+    			printf("[server] Received SHUTDOWN message\n");
+    			break;
+    		default:
+    			printf("[server] Error, did not receive a standard message type\n");
+    			break;
+    		
+    	}
     }
     
 	// Close the UDP connection and exit
@@ -82,7 +122,7 @@ int FileSystemInitialize(int _fsfd)
 	// Create data structures for the empty file system
 	char EmptyBlock[MFS_BLOCK_SIZE];
 	char SuperBlock[MFS_BLOCK_SIZE];
-	struct __MFS_Inode_t Inodes[64];
+	struct dinode Inodes[64];
 	int DataBitmap[1024];
 	struct __MFS_DirEnt_t RootDirectory;
 	struct __MFS_DirEnt_t RootCurrentDirectory;
@@ -98,7 +138,7 @@ int FileSystemInitialize(int _fsfd)
 	
 	// Now create an inode for the root directory
 	Inodes[0].type = MFS_DIRECTORY;
-	Inodes[0].dataptr[0] = 0;
+	Inodes[0].addrs[0] = 0;
 	
 	// Indicate in the data bitmap that the first data block is taken
 	DataBitmap[0] = 1;
@@ -121,5 +161,45 @@ int FileSystemInitialize(int _fsfd)
 		write(_fsfd, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
 	}
 	
+	return 0;
+}
+
+int ServerInit()
+{
+	return 0;
+}
+
+int ServerLookup(int pinum, char *name)
+{
+	return 0;
+}
+
+int ServerStat(int inum, MFS_Stat_t *m)
+{
+	return 0;
+}
+
+int ServerWrite(int inum, char *buffer, int block)
+{
+	return 0;
+}
+
+int ServerRead(int inum, char *buffer, int block)
+{
+	return 0;
+}
+
+int ServerCreat(int pinum, int type, char *name)
+{
+	return 0;
+}
+
+int ServerUnlink(int pinum, char *name)
+{
+	return 0;
+}
+
+int ServerShutdown()
+{
 	return 0;
 }

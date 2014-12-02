@@ -14,8 +14,8 @@ int MFS_Init(char *hostname, int port)
 	printf("[MFS_Init] hostname=%s, port=%d\n", hostname, port);
 
 	// Declare variables
-	char *InitMessage;
 	int SocketDescriptor = UDP_Open(0);
+	message InitRequest;	
 	struct sockaddr_in UDPSocket;
 
 	// Fill the UDPSocket object
@@ -25,9 +25,8 @@ int MFS_Init(char *hostname, int port)
 	}
 	
 	// Send the initialize message
-	InitMessage = (char*) malloc(100 * sizeof(char));
-	strcpy(InitMessage, "hello!");
-	UDP_Write(SocketDescriptor, &UDPSocket, InitMessage, 100);
+	InitRequest.type = 3;
+	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&InitRequest, sizeof(message));
 	
 	return 0;
 }

@@ -13,7 +13,7 @@ mfs.o: mfs.c
 	gcc -c -fpic mfs.c -o mfs.o -Wall -Werror
 	
 udp.o: udp.c
-	gcc -c udp.c -o udp.o -Wall -Werror
+	gcc -c -fPIC udp.c -o udp.o -Wall -Werror
 	
 clean:
 	rm -rf *.so *.o server

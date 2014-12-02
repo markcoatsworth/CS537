@@ -6,12 +6,10 @@
 
 int main(int argc, char *argv[])
 {
-	// Define local variables
 	
-	// Verify + store command line arguments
     
     // Open the server on the specified port
-    MFS_Init("127.0.0.1", 666);
+    MFS_Init("127.0.0.1", 1666);
     
     return 0;
 }
