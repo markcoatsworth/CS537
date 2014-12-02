@@ -9,14 +9,14 @@
 */
 
 int FileSystemInitialize(int _fsfd);
-int ServerInit();
-int ServerLookup(int pinum, char *name);
-int ServerStat(int inum, MFS_Stat_t *m);
-int ServerWrite(int inum, char *buffer, int block);
-int ServerRead(int inum, char *buffer, int block);
-int ServerCreat(int pinum, int type, char *name);
-int ServerUnlink(int pinum, char *name);
-int ServerShutdown();
+response ServerInit();
+response ServerLookup(int pinum, char *name);
+response ServerStat(int inum, MFS_Stat_t *m);
+response ServerWrite(int inum, char *buffer, int block);
+response ServerRead(int inum, char *buffer, int block);
+response ServerCreat(int pinum, int type, char *name);
+response ServerUnlink(int pinum, char *name);
+response ServerShutdown();
 
 /*
 **	Global variables
@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
 	// Define local variables
 	int FileSystemDescriptor;
 	int SocketDescriptor;
-   	message IncomingRequest;	
+   	message IncomingRequest;
+   	response OutgoingResponse;	
    	struct sockaddr_in UDPSocket;
 	
 	// Verify + store command line arguments
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
     			break;
     		case 1: // LOOKUP
     			printf("[server] Received LOOKUP message\n");
+    			OutgoingResponse = ServerLookup(IncomingRequest.inum, IncomingRequest.name);
     			break;
     		case 2: // STAT
     			printf("[server] Received STAT message\n");
@@ -107,8 +109,9 @@ int main(int argc, char *argv[])
     		default:
     			printf("[server] Error, did not receive a standard message type\n");
     			break;
-    		
     	}
+    	
+    	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&OutgoingResponse, sizeof(response));
     }
     
 	// Close the UDP connection and exit
@@ -164,42 +167,53 @@ int FileSystemInitialize(int _fsfd)
 	return 0;
 }
 
-int ServerInit()
+response ServerInit()
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerLookup(int pinum, char *name)
+response ServerLookup(int pinum, char *name)
 {
-	return 0;
+	response ResponseMessage;
+	
+	ResponseMessage.rc = 666;
+	
+	return ResponseMessage;
 }
 
-int ServerStat(int inum, MFS_Stat_t *m)
+response ServerStat(int inum, MFS_Stat_t *m)
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerWrite(int inum, char *buffer, int block)
+response ServerWrite(int inum, char *buffer, int block)
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerRead(int inum, char *buffer, int block)
+response ServerRead(int inum, char *buffer, int block)
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerCreat(int pinum, int type, char *name)
+response ServerCreat(int pinum, int type, char *name)
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerUnlink(int pinum, char *name)
+response ServerUnlink(int pinum, char *name)
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }
 
-int ServerShutdown()
+response ServerShutdown()
 {
-	return 0;
+	response ResponseMessage;
+	return ResponseMessage;
 }

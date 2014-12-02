@@ -7,7 +7,7 @@
 **	Global variables
 */
 
-//int ServerSocket;
+struct sockaddr_in UDPSocket;
 
 int MFS_Init(char *hostname, int port)
 {
@@ -16,7 +16,6 @@ int MFS_Init(char *hostname, int port)
 	// Declare variables
 	int SocketDescriptor = UDP_Open(0);
 	message InitRequest;	
-	struct sockaddr_in UDPSocket;
 
 	// Fill the UDPSocket object
 	if(UDP_FillSockAddr(&UDPSocket, hostname, port) != 0)
@@ -25,7 +24,7 @@ int MFS_Init(char *hostname, int port)
 	}
 	
 	// Send the initialize message
-	InitRequest.type = 3;
+	InitRequest.type = 0;
 	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&InitRequest, sizeof(message));
 	
 	return 0;
@@ -33,8 +32,32 @@ int MFS_Init(char *hostname, int port)
 
 int MFS_Lookup(int pinum, char *name)
 {
-	printf("[MFS_Lookup]\n");
-	return 0;
+	printf("[MFS_Lookup] pinum=%d\n", pinum);
+
+	// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message InitRequest;
+	response InitResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		printf("[MFS_Lookup] Error: need to initialize UDPSocket before calling MFS_Lookup\n");
+	}
+	
+	// Send the initialize message
+	InitRequest.type = 1;
+	InitRequest.inum = pinum;
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&InitRequest, sizeof(message));
+	printf("[MFS_Lookup] Sent %d bytes\n", BytesSent);
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&InitResponse, sizeof(message));
+	printf("[MFS_Lookup] Received response, BytesReceived=%d, InitResponse.rc=%d\n", BytesReceived, InitResponse.rc);
+	
+	return BytesSent;
 }
 
 int MFS_Stat(int inum, MFS_Stat_t *m)
