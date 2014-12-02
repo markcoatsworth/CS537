@@ -79,3 +79,8 @@ int MFS_Creat(int pinum, int type, char *name);
 int MFS_Unlink(int pinum, char *name);
 int MFS_Shutdown(); 
 
+// Disk region offsets
+#define OFFSET_SUPERBLOCK MFS_BLOCK_SIZE
+#define OFFSET_INODES (2*MFS_BLOCK_SIZE)
+#define OFFSET_DATABITMAP (3*MFS_BLOCK_SIZE)
+#define OFFSET_DATA (4*MFS_BLOCK_SIZE)

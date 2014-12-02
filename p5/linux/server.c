@@ -8,7 +8,7 @@
 **	Function declarations
 */
 
-int FileSystemInitialize(int _fsfd);
+int FileSystemInitialize();
 response ServerInit();
 response ServerLookup(int pinum, char *name);
 response ServerStat(int inum, MFS_Stat_t *m);
@@ -17,11 +17,13 @@ response ServerRead(int inum, char *buffer, int block);
 response ServerCreat(int pinum, int type, char *name);
 response ServerUnlink(int pinum, char *name);
 response ServerShutdown();
+void DebugFileSystem();
 
 /*
 **	Global variables
 */
 
+int FileSystemDescriptor;
 char *FileSystemImageFile;
 int PortNumber;
 
@@ -43,7 +45,6 @@ void getargs(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	// Define local variables
-	int FileSystemDescriptor;
 	int SocketDescriptor;
    	message IncomingRequest;
    	response OutgoingResponse;	
@@ -66,7 +67,7 @@ int main(int argc, char *argv[])
     {
     	printf("[server] File system image does not exist, creating it\n");
     	FileSystemDescriptor = open(FileSystemImageFile, O_RDWR | O_CREAT, S_IRWXU | S_IRUSR);
-    	if(FileSystemInitialize(FileSystemDescriptor) != 0)
+    	if(FileSystemInitialize() != 0)
     	{
     		perror("Error initializing file system");
     	}
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int FileSystemInitialize(int _fsfd)
+int FileSystemInitialize()
 {
 	// Create data structures for the empty file system
 	char EmptyBlock[MFS_BLOCK_SIZE];
@@ -133,9 +134,9 @@ int FileSystemInitialize(int _fsfd)
 	
 	// Create the root directory for the file system, as well as the current "." and parent ".." entries.
    	strcpy(RootDirectory.name, "\0");
-	RootDirectory.inum = 0;
+	RootDirectory.inum = ROOTINO;
 	strcpy(RootCurrentDirectory.name, ".\0");
-	RootCurrentDirectory.inum = 0;
+	RootCurrentDirectory.inum = ROOTINO;
 	strcpy(RootParentDirectory.name, "..\0");
 	RootParentDirectory.inum = -1;
 	
@@ -147,21 +148,21 @@ int FileSystemInitialize(int _fsfd)
 	DataBitmap[0] = 1;
 	
 	// Write data structures to the file system image. Start with the header (ie. non-data) blocks.
-	write(_fsfd, (const void*)(&EmptyBlock), MFS_BLOCK_SIZE);
-	write(_fsfd, (const void*)(&SuperBlock), MFS_BLOCK_SIZE);
-	write(_fsfd, (const void*)(&Inodes), MFS_BLOCK_SIZE);
-	write(_fsfd, (const void*)(&DataBitmap), MFS_BLOCK_SIZE);
+	write(FileSystemDescriptor, (const void*)(&EmptyBlock), MFS_BLOCK_SIZE);
+	write(FileSystemDescriptor, (const void*)(&SuperBlock), MFS_BLOCK_SIZE);
+	write(FileSystemDescriptor, (const void*)(&Inodes), MFS_BLOCK_SIZE);
+	write(FileSystemDescriptor, (const void*)(&DataBitmap), MFS_BLOCK_SIZE);
 	
 	// Now write the first data block. Combine all three directory entries into the same block.
-	write(_fsfd, (const void*)(&RootDirectory), sizeof(struct __MFS_DirEnt_t));
-	write(_fsfd, (const void*)(&RootCurrentDirectory), sizeof(struct __MFS_DirEnt_t));
-	write(_fsfd, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
+	write(FileSystemDescriptor, (const void*)(&RootDirectory), sizeof(struct __MFS_DirEnt_t));
+	write(FileSystemDescriptor, (const void*)(&RootCurrentDirectory), sizeof(struct __MFS_DirEnt_t));
+	write(FileSystemDescriptor, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
 	
 	// Now fill the first data block with dummy data
 	int i;
 	for(i = 1; i <= (64 - 3); i++)
 	{
-		write(_fsfd, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
+		write(FileSystemDescriptor, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
 	}
 	
 	return 0;
@@ -175,10 +176,36 @@ response ServerInit()
 
 response ServerLookup(int pinum, char *name)
 {
+	// Local variables
 	response ResponseMessage;
+	struct __MFS_DirEnt_t DirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+	struct dinode Inodes[IPB];
 	
-	ResponseMessage.rc = 666;
+	// Retrieve the requested directory inode
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
 	
+	// Make sure the inode at directory pinum is a directory
+	if(Inodes[pinum].type == MFS_DIRECTORY)
+	{
+		// Read all directory entries from this inode
+		lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
+		read(FileSystemDescriptor, &DirectoryEntries, MFS_BLOCK_SIZE);
+
+		int entry;
+		for(entry = 0; entry < MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t); entry++)
+		{
+			// If we find a matching entry, set the response code as the inum value, and return the response message
+			if(strcmp(DirectoryEntries[entry].name, name) == 0)
+			{
+				ResponseMessage.rc = DirectoryEntries[entry].inum;
+				return ResponseMessage;
+			}
+		}					
+	}
+		
+	// If no matching entry was found, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
 }
 
@@ -216,4 +243,57 @@ response ServerShutdown()
 {
 	response ResponseMessage;
 	return ResponseMessage;
+}
+
+void DebugFileSystem()
+{
+	printf("[DebugFileSystem] Starting...\n");
+	int i;
+	struct __MFS_DirEnt_t DirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+	struct dinode Inodes[IPB];
+	
+	// Retrieve the requested directory inode
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	for(i = 0; i < IPB; i ++)
+	{
+		if(Inodes[i].type > 0)
+		{
+			printf("[DebugFileSystem] Inodes[%d]: type=%d, size=%d, addrs:\n", i, Inodes[i].type, Inodes[i].size);
+			int ptr;
+			for(ptr = 0; ptr < NDIRECT+1; ptr++)
+			{
+				if(Inodes[i].addrs[ptr] != -1)
+				{
+					printf("\t[%d] %d\n", ptr, Inodes[i].addrs[ptr]);
+					if(Inodes[i].type == MFS_DIRECTORY)
+					{	
+						lseek(FileSystemDescriptor, Inodes[i].addrs[ptr], 0);
+						read(FileSystemDescriptor, &DirectoryEntries, MFS_BLOCK_SIZE);
+						int entry;
+						for(entry = 0; entry < MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t); entry++)
+						{
+							if(DirectoryEntries[entry].inum != -1)
+							{
+								printf("\t\t> %s (%d)\n", DirectoryEntries[entry].name, DirectoryEntries[entry].inum);
+							}
+						}
+						//printf("\tDirectory name: %s, inum: %d\n", DirectoryEntry.name, DirectoryEntries.inum);
+					}
+					else if(Inodes[i].type == MFS_REGULAR_FILE)
+					{
+						printf("\tFile Contents:\n");
+						char *FileBuffer;
+						FileBuffer = (char*) malloc (MFS_BLOCK_SIZE * sizeof(char));
+						lseek(FileSystemDescriptor, Inodes[i].addrs[ptr], 0);
+						read(FileSystemDescriptor, FileBuffer, MFS_BLOCK_SIZE);
+						printf("\t%s\n", FileBuffer);
+						free(FileBuffer);
+					}
+				}
+			}
+			
+		}
+	}
 }

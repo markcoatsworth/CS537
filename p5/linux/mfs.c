@@ -32,14 +32,12 @@ int MFS_Init(char *hostname, int port)
 
 int MFS_Lookup(int pinum, char *name)
 {
-	printf("[MFS_Lookup] pinum=%d\n", pinum);
-
 	// Declare variables
 	int BytesReceived;
 	int BytesSent;
 	int SocketDescriptor = UDP_Open(0);
-	message InitRequest;
-	response InitResponse;	
+	message LookupRequest;
+	response LookupResponse;	
 
 	// Verify that UDPSocket has been initialized
 	if(UDPSocket.sin_port <= 0)
@@ -48,16 +46,17 @@ int MFS_Lookup(int pinum, char *name)
 	}
 	
 	// Send the initialize message
-	InitRequest.type = 1;
-	InitRequest.inum = pinum;
-	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&InitRequest, sizeof(message));
-	printf("[MFS_Lookup] Sent %d bytes\n", BytesSent);
+	LookupRequest.type = 1;
+	LookupRequest.inum = pinum;
+	strcpy(LookupRequest.name, name);
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&LookupRequest, sizeof(message));
 	
 	// Wait for the response
-	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&InitResponse, sizeof(message));
-	printf("[MFS_Lookup] Received response, BytesReceived=%d, InitResponse.rc=%d\n", BytesReceived, InitResponse.rc);
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&LookupResponse, sizeof(response));
+	printf("[MFS_Lookup] Received response, BytesReceived=%d, InitResponse.rc=%d\n", BytesReceived, LookupResponse.rc);
 	
-	return BytesSent;
+	// Return the lookup response code (-1 if failure, or inode # if success)
+	return LookupResponse.rc;
 }
 
 int MFS_Stat(int inum, MFS_Stat_t *m)
