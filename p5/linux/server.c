@@ -13,7 +13,7 @@ response ServerInit();
 response ServerLookup(int pinum, char *name);
 response ServerStat(int inum);
 response ServerWrite(int inum, char *buffer, int block);
-response ServerRead(int inum, char *buffer, int block);
+response ServerRead(int inum, int block);
 response ServerCreat(int pinum, int type, char *name);
 response ServerUnlink(int pinum, char *name);
 response ServerShutdown();
@@ -81,38 +81,38 @@ int main(int argc, char *argv[])
     {
     	int BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&IncomingRequest, sizeof(message));
     	
-    	printf("[server] Received data, BytesReceived=%d, IncomingRequest.RequestType=%d\n", BytesReceived, IncomingRequest.type);
-    	switch(IncomingRequest.type)
+    	printf("[server] Received data, BytesReceived=%d, IncomingRequest.cmd=%s\n", BytesReceived, IncomingRequest.cmd);
+    	if(strcmp(IncomingRequest.cmd, "INIT") == 0)
     	{
-    		case 0: // INIT
-    			printf("[server] Received INIT message\n");
-    			break;
-    		case 1: // LOOKUP
-    			printf("[server] Received LOOKUP message\n");
-    			OutgoingResponse = ServerLookup(IncomingRequest.inum, IncomingRequest.name);
-    			break;
-    		case 2: // STAT
-    			printf("[server] Received STAT message\n");
-    			OutgoingResponse = ServerStat(IncomingRequest.inum);
-    			break;
-    		case 3: // WRITE
-    			printf("[server] Received WRITE message\n");
-    			break;
-    		case 4: // READ
-    			printf("[server] Received READ message\n");
-    			break;
-    		case 5: // CREAT
-    			printf("[server] Received CREAT message\n");
-    			break;
-    		case 6: // UNLINK
-    			printf("[server] Received UNLINK message\n");
-    			break;
-    		case 7: // SHUTDOWN
-    			printf("[server] Received SHUTDOWN message\n");
-    			break;
-    		default:
-    			printf("[server] Error, did not receive a standard message type\n");
-    			break;
+			OutgoingResponse = ServerInit();
+		}
+		else if(strcmp(IncomingRequest.cmd, "LOOKUP") == 0)
+		{
+			OutgoingResponse = ServerLookup(IncomingRequest.inum, IncomingRequest.name);
+		}
+		else if(strcmp(IncomingRequest.cmd, "STAT") == 0)
+    	{
+    		OutgoingResponse = ServerStat(IncomingRequest.inum);
+    	}
+    	else if(strcmp(IncomingRequest.cmd, "WRITE") == 0)
+    	{
+			OutgoingResponse = ServerWrite(IncomingRequest.inum, IncomingRequest.block, IncomingRequest.blocknum);
+		}
+		else if(strcmp(IncomingRequest.cmd, "READ") == 0)
+    	{
+    		OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
+    	}
+    	else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
+    	{
+    		OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
+    	}
+    	else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
+    	{
+    		printf("[server] Received UNLINK message\n");
+    	}
+    	else if(strcmp(IncomingRequest.cmd, "SHUTDOWN") == 0)
+    	{
+   			printf("[server] Received SHUTDOWN message\n");
     	}
     	
     	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&OutgoingResponse, sizeof(response));
@@ -180,6 +180,7 @@ int FileSystemInitialize()
 response ServerInit()
 {
 	response ResponseMessage;
+	ResponseMessage.rc = 0;
 	return ResponseMessage;
 }
 
@@ -254,13 +255,87 @@ response ServerStat(int inum)
 
 response ServerWrite(int inum, char *buffer, int block)
 {
+	// Local variables
+	int BytesWritten;
 	response ResponseMessage;
+	struct dinode Inodes[IPB];
+	
+	// Retrieve the requested directory inode
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	// Make sure the inode at directory pinum is a regular file
+	if(Inodes[inum].type == MFS_REGULAR_FILE)
+	{
+		// Make sure block falls within valid range
+		if(block >= 0 && block <= NDIRECT)
+		{
+			// Verify that the requested block entry is valid
+			if(Inodes[inum].addrs[block] != -1)
+			{
+				// Write the buffer to the address specified by this inode pointer
+				lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
+				BytesWritten = write(FileSystemDescriptor, buffer, MFS_BLOCK_SIZE);
+				
+				if(BytesWritten > 0)
+				{
+					// If write was successful, return a success code
+					ResponseMessage.rc = BytesWritten;
+					return ResponseMessage;
+				}
+			}
+		}
+	}		
+
+	// If we failed any of the conditions, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
 }
 
-response ServerRead(int inum, char *buffer, int block)
+response ServerRead(int inum, int block)
 {
+	// Local variables
+	char* ReadBuffer;
+	int BytesRead;
 	response ResponseMessage;
+	struct dinode Inodes[IPB];
+	
+	// Allocate the read buffer
+	ReadBuffer = (char*) malloc(MFS_BLOCK_SIZE * sizeof(char));
+	
+	// Retrieve the requested directory inode
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	// Make sure the inode is valid
+	if(Inodes[inum].type > 0)
+	{
+		// Make sure block falls within valid range
+		if(block >= 0 && block <= NDIRECT)
+		{
+			// Verify that the requested block entry is valid
+			if(Inodes[inum].addrs[block] != -1)
+			{
+				// If we are reading from a regular file, grab the data and return it in the response message
+				if(Inodes[inum].type == MFS_REGULAR_FILE)
+				{
+					lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
+					BytesRead = read(FileSystemDescriptor, ReadBuffer, MFS_BLOCK_SIZE);
+					
+					if(BytesRead > 0)
+					{
+						// If write was successful, return a success code
+						ResponseMessage.rc = BytesRead;
+						strcpy(ResponseMessage.block, ReadBuffer);
+						return ResponseMessage;
+					}
+				}
+			}
+		}
+	}
+				
+	// If we failed any of the conditions, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
 }
 

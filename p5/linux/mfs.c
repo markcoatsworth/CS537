@@ -11,8 +11,6 @@ struct sockaddr_in UDPSocket;
 
 int MFS_Init(char *hostname, int port)
 {
-	printf("[MFS_Init] hostname=%s, port=%d\n", hostname, port);
-
 	// Declare variables
 	int SocketDescriptor = UDP_Open(0);
 	message InitRequest;	
@@ -21,10 +19,11 @@ int MFS_Init(char *hostname, int port)
 	if(UDP_FillSockAddr(&UDPSocket, hostname, port) != 0)
 	{
 		printf("[MFS_Init] Error filling UDPSocket object\n");
+		return -1;
 	}
 	
-	// Send the initialize message
-	InitRequest.type = 0;
+	// Send the INIT message
+	strcpy(InitRequest.cmd, "INIT");
 	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&InitRequest, sizeof(message));
 	
 	return 0;
@@ -42,11 +41,12 @@ int MFS_Lookup(int pinum, char *name)
 	// Verify that UDPSocket has been initialized
 	if(UDPSocket.sin_port <= 0)
 	{
-		printf("[MFS_Lookup] Error: need to initialize UDPSocket before calling MFS_Lookup\n");
+		perror("[MFS_Lookup] Error: UDPSocket not initialized\n");
+		return -1;
 	}
 	
-	// Send the initialize message
-	LookupRequest.type = 1;
+	// Send the LOOKUP message
+	strcpy(LookupRequest.cmd, "LOOKUP");
 	LookupRequest.inum = pinum;
 	strcpy(LookupRequest.name, name);
 	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&LookupRequest, sizeof(message));
@@ -71,11 +71,12 @@ int MFS_Stat(int inum, MFS_Stat_t *m)
 	// Verify that UDPSocket has been initialized
 	if(UDPSocket.sin_port <= 0)
 	{
-		printf("[MFS_Stat] Error: need to initialize UDPSocket before calling MFS_Lookup\n");
+		perror("[MFS_Stat] Error: UDPSocket not initialized\n");
+		return -1;
 	}
 	
-	// Send the initialize message
-	StatRequest.type = 2;
+	// Send the STAT message
+	strcpy(StatRequest.cmd, "STAT");
 	StatRequest.inum = inum;
 	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&StatRequest, sizeof(message));
 	
@@ -91,20 +92,98 @@ int MFS_Stat(int inum, MFS_Stat_t *m)
 
 int MFS_Write(int inum, char *buffer, int block)
 {
-	printf("[MFS_Write]\n");
-	return 0;
+	// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message WriteRequest;
+	response WriteResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Write] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the WRITE message
+	strcpy(WriteRequest.cmd, "WRITE");
+	WriteRequest.inum = inum;
+	strcpy(WriteRequest.block, buffer);
+	WriteRequest.blocknum = block;
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&WriteRequest, sizeof(message));
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&WriteResponse, sizeof(response));
+	printf("[MFS_Write] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, WriteResponse.rc);
+	
+	// Return the lookup response code (-1 if failure, 0 if success)
+	return WriteResponse.rc;
 }
 
 int MFS_Read(int inum, char *buffer, int block)
 {
-	printf("[MFS_Read]\n");
-	return 0;
+	// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message ReadRequest;
+	response ReadResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Read] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the READ message
+	strcpy(ReadRequest.cmd, "READ");
+	ReadRequest.inum = inum;
+	ReadRequest.blocknum = block;
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&ReadRequest, sizeof(message));
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ReadResponse, sizeof(response));
+	if(ReadResponse.rc > 0)
+	{
+		strcpy(buffer, ReadResponse.block);
+	}
+	printf("[MFS_Read] Received response, BytesReceived=%d, ReadResponse.rc=%d, buffer=%s\n", BytesReceived, ReadResponse.rc, buffer);
+	
+	// Return the lookup response code (-1 if failure, 0 if success)
+	return ReadResponse.rc;
+
 }
 
 int MFS_Creat(int pinum, int type, char *name)
 {
-	printf("[MFS_Creat]\n");
-	return 0;
+	// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message CreatRequest;
+	response CreatResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Write] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the CREAT message
+	strcpy(CreatRequest.cmd, "CREAT");
+	CreatRequest.inum = pinum;
+	strcpy(CreatRequest.name, name);
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&CreatRequest, sizeof(message));
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&CreatResponse, sizeof(response));
+	printf("[MFS_Write] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, CreatResponse.rc);
+	
+	// Return the lookup response code (-1 if failure, 0 if success)
+	return CreatResponse.rc;
 }
 
 int MFS_Unlink(int pinum, char *name)

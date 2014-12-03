@@ -28,6 +28,23 @@ int main(int argc, char *argv[])
     int BogusStatReturnCode = MFS_Stat(666, &BogusStat);
     printf("[client] MFS_Stat returned %d for the bogus stat lookup; BogusStat.size=%d, BogusStat.type=%d\n", BogusStatReturnCode, BogusStat.size, BogusStat.type);
 
+	// Do a valid write
+	int ValidWrite = MFS_Write(3, "This is a bunch of dummy text", 0);
+	printf("[client] MFS_Write returned %d for the valid write request\n", ValidWrite);
+	
+	// Do a valid read (of the data we just wrote)
+	char *ValidReadBuffer;
+	ValidReadBuffer = (char*)malloc(MFS_BLOCK_SIZE * sizeof(char));
+	int ValidRead = MFS_Read(3, ValidReadBuffer, 0);
+	printf("[client] MFS_Read returned %d for the valid read, ReadBuffer=%s\n", ValidRead, ValidReadBuffer);
+    
+    // Now try a bogus read to an inode that doesn't exist
+    char *BogusReadBuffer;
+	BogusReadBuffer = (char*)malloc(MFS_BLOCK_SIZE * sizeof(char));
+    int BogusRead = MFS_Read(3, BogusReadBuffer, 10);
+    printf("[client] MFS_Read returned %d for the bogus read, ReadBuffer=%s\n", BogusRead, BogusReadBuffer);
+    
+	    
     
     return 0;
 }
