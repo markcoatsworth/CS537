@@ -175,15 +175,21 @@ int MFS_Creat(int pinum, int type, char *name)
 	// Send the CREAT message
 	strcpy(CreatRequest.cmd, "CREAT");
 	CreatRequest.inum = pinum;
+	CreatRequest.type = type;
 	strcpy(CreatRequest.name, name);
 	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&CreatRequest, sizeof(message));
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&CreatResponse, sizeof(response));
-	printf("[MFS_Write] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, CreatResponse.rc);
+	printf("[MFS_Creat] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, CreatResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
-	return CreatResponse.rc;
+	if(CreatResponse.rc < 0)
+	{
+		return -1;
+	}
+	
+	return 0;
 }
 
 int MFS_Unlink(int pinum, char *name)

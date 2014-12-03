@@ -48,42 +48,42 @@ int main(int argc, char *argv[])
 {
 	// Define local variables
 	int SocketDescriptor;
-   	message IncomingRequest;
-   	response OutgoingResponse;	
-   	struct sockaddr_in UDPSocket;
+	message IncomingRequest;
+	response OutgoingResponse;	
+	struct sockaddr_in UDPSocket;
 	
 	// Verify + store command line arguments
-    getargs(argc, argv);
-    
-    // Open the server on the specified port
-    SocketDescriptor = UDP_Open(PortNumber);
-    if(SocketDescriptor <= 0)
-    {
-    	perror("Error binding UDP socket");
-    	return 1;
-    }
-    
-    // Open the file system image. If it does not exist, create it and initialize it.
-    FileSystemDescriptor = open(FileSystemImageFile, O_RDWR, S_IRWXU | S_IRUSR);
-    if(FileSystemDescriptor < 0)
-    {
-    	printf("[server] File system image does not exist, creating it\n");
-    	FileSystemDescriptor = open(FileSystemImageFile, O_RDWR | O_CREAT, S_IRWXU | S_IRUSR);
-    	if(FileSystemInitialize() != 0)
-    	{
-    		perror("Error initializing file system");
-    	}
-    }
-    
-    // Enter the main server loop
+	getargs(argc, argv);
+	
+	// Open the server on the specified port
+	SocketDescriptor = UDP_Open(PortNumber);
+	if(SocketDescriptor <= 0)
+	{
+		perror("Error binding UDP socket");
+		return 1;
+	}
+	
+	// Open the file system image. If it does not exist, create it and initialize it.
+	FileSystemDescriptor = open(FileSystemImageFile, O_RDWR, S_IRWXU | S_IRUSR);
+	if(FileSystemDescriptor < 0)
+	{
+		printf("[server] File system image does not exist, creating it\n");
+		FileSystemDescriptor = open(FileSystemImageFile, O_RDWR | O_CREAT, S_IRWXU | S_IRUSR);
+		if(FileSystemInitialize() != 0)
+		{
+			perror("Error initializing file system");
+		}
+	}
+	
+	// Enter the main server loop
 	printf("[server] Started UDP file system server\n");
-    while(1)
-    {
-    	int BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&IncomingRequest, sizeof(message));
-    	
-    	printf("[server] Received data, BytesReceived=%d, IncomingRequest.cmd=%s\n", BytesReceived, IncomingRequest.cmd);
-    	if(strcmp(IncomingRequest.cmd, "INIT") == 0)
-    	{
+	while(1)
+	{
+		int BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&IncomingRequest, sizeof(message));
+		
+		printf("[server] Received data, BytesReceived=%d, IncomingRequest.cmd=%s\n", BytesReceived, IncomingRequest.cmd);
+		if(strcmp(IncomingRequest.cmd, "INIT") == 0)
+		{
 			OutgoingResponse = ServerInit();
 		}
 		else if(strcmp(IncomingRequest.cmd, "LOOKUP") == 0)
@@ -91,33 +91,33 @@ int main(int argc, char *argv[])
 			OutgoingResponse = ServerLookup(IncomingRequest.inum, IncomingRequest.name);
 		}
 		else if(strcmp(IncomingRequest.cmd, "STAT") == 0)
-    	{
-    		OutgoingResponse = ServerStat(IncomingRequest.inum);
-    	}
-    	else if(strcmp(IncomingRequest.cmd, "WRITE") == 0)
-    	{
+		{
+			OutgoingResponse = ServerStat(IncomingRequest.inum);
+		}
+		else if(strcmp(IncomingRequest.cmd, "WRITE") == 0)
+		{
 			OutgoingResponse = ServerWrite(IncomingRequest.inum, IncomingRequest.block, IncomingRequest.blocknum);
 		}
 		else if(strcmp(IncomingRequest.cmd, "READ") == 0)
-    	{
-    		OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
-    	}
-    	else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
-    	{
-    		OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
-    	}
-    	else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
-    	{
-    		printf("[server] Received UNLINK message\n");
-    	}
-    	else if(strcmp(IncomingRequest.cmd, "SHUTDOWN") == 0)
-    	{
-   			printf("[server] Received SHUTDOWN message\n");
-    	}
-    	
-    	UDP_Write(SocketDescriptor, &UDPSocket, (char*)&OutgoingResponse, sizeof(response));
-    }
-    
+		{
+			OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
+		}
+		else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
+		{
+			OutgoingResponse = ServerCreat(IncomingRequest.inum, IncomingRequest.type, IncomingRequest.name);
+		}
+		else if(strcmp(IncomingRequest.cmd, "UNLINK") == 0)
+		{
+			printf("[server] Received UNLINK message\n");
+		}
+		else if(strcmp(IncomingRequest.cmd, "SHUTDOWN") == 0)
+		{
+			printf("[server] Received SHUTDOWN message\n");
+		}
+		
+		UDP_Write(SocketDescriptor, &UDPSocket, (char*)&OutgoingResponse, sizeof(response));
+	}
+	
 	// Close the UDP connection and exit
 	UDP_Close(FileSystemDescriptor);
 	
@@ -164,7 +164,7 @@ int FileSystemInitialize()
 	write(FileSystemDescriptor, (const void*)(&RootCurrentDirectory), sizeof(struct __MFS_DirEnt_t));
 	write(FileSystemDescriptor, (const void*)(&RootParentDirectory), sizeof(struct __MFS_DirEnt_t));
 	
-	// Now fill the first data block with dummy data
+	// Now fill the rest of the first data block with dummy data
 	int i;
 	for(i = 1; i <= (64 - 3); i++)
 	{
@@ -253,6 +253,9 @@ response ServerStat(int inum)
 
 }
 
+/*
+**	Handles the MFS_Write request.
+*/
 response ServerWrite(int inum, char *buffer, int block)
 {
 	// Local variables
@@ -292,6 +295,9 @@ response ServerWrite(int inum, char *buffer, int block)
 	return ResponseMessage;
 }
 
+/*
+**	Handles the MFS_Read request.
+*/
 response ServerRead(int inum, int block)
 {
 	// Local variables
@@ -320,11 +326,10 @@ response ServerRead(int inum, int block)
 				if(Inodes[inum].type == MFS_REGULAR_FILE)
 				{
 					lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
-					BytesRead = read(FileSystemDescriptor, ReadBuffer, MFS_BLOCK_SIZE);
-					
+					BytesRead = read(FileSystemDescriptor, ReadBuffer, MFS_BLOCK_SIZE);					
 					if(BytesRead > 0)
 					{
-						// If write was successful, return a success code
+						// If read was successful, return the block data + a success code
 						ResponseMessage.rc = BytesRead;
 						strcpy(ResponseMessage.block, ReadBuffer);
 						return ResponseMessage;
@@ -339,24 +344,96 @@ response ServerRead(int inum, int block)
 	return ResponseMessage;
 }
 
+/*
+**	Handles the MFS_Creat request.
+*/
 response ServerCreat(int pinum, int type, char *name)
 {
+	// Local variables
 	response ResponseMessage;
+	struct __MFS_DirEnt_t DirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+	struct dinode Inodes[IPB];
+	
+	// Retrieve all inodes
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	// Make sure the parent directory requested is valid
+	if(Inodes[pinum].type == MFS_DIRECTORY)
+	{
+		// Retrieve the block data for this directory, and determine the next available directory entry
+		lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
+		read(FileSystemDescriptor, &DirectoryEntries, MFS_BLOCK_SIZE);
+		
+		int entry;
+		for(entry = 0; entry < MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t); entry++)
+		{
+			if(DirectoryEntries[entry].inum == -1)
+			{
+				printf("[ServerCreat] Found an available directory entry at position %d\n", entry);
+				// Allocate a new inode
+				int i;
+				for(i = 0; i < IPB; i ++)
+				{
+					printf("[ServerCreat] Inodes[%d].type=%d\n", i, Inodes[i].type);
+					if(Inodes[i].type == 0)
+					{
+						printf("[ServerCreat] Allocating new inode %d\n", i);
+				
+						Inodes[i].type = type;
+						Inodes[i].size = 0;
+						
+						// Now that we have an inode #, allocate the new directory entry
+						strcpy(DirectoryEntries[entry].name, name);
+						DirectoryEntries[entry].inum = i;
+						
+						// Write the new inode list and new directory entries to disk
+						lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+						write(FileSystemDescriptor, (const void*)(&Inodes), MFS_BLOCK_SIZE);
+						lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
+						write(FileSystemDescriptor, (const void*)(&DirectoryEntries), MFS_BLOCK_SIZE);
+						
+						DebugFileSystem();
+						
+						// All done! Return the succcess message
+						ResponseMessage.rc = i;
+						return ResponseMessage;
+					}
+				}
+				
+				// If no more inodes are available, return the failure code
+				ResponseMessage.rc = -1;
+				return ResponseMessage;
+			}
+		}
+	}
+				
+	// If we failed any of the conditions, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
 }
 
+/*
+**	Handles the MFS_Unlink request.
+*/
 response ServerUnlink(int pinum, char *name)
 {
 	response ResponseMessage;
 	return ResponseMessage;
 }
 
+/*
+**	Handles the MFS_Shutdown request.
+*/
 response ServerShutdown()
 {
 	response ResponseMessage;
 	return ResponseMessage;
 }
 
+/*
+**	Dumps a bunch of data about the file system to stdout. Useful for debugging.
+*/
 void DebugFileSystem()
 {
 	printf("[DebugFileSystem] Starting...\n");

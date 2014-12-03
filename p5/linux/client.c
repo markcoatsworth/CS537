@@ -44,7 +44,9 @@ int main(int argc, char *argv[])
     int BogusRead = MFS_Read(3, BogusReadBuffer, 10);
     printf("[client] MFS_Read returned %d for the bogus read, ReadBuffer=%s\n", BogusRead, BogusReadBuffer);
     
-	    
+	// Do a valid creat
+	int ValidCreat = MFS_Creat(0, MFS_REGULAR_FILE, "creatfile.txt");    
+	printf("[client] MFS_Creat returned %d for the valid creat\n", ValidCreat);
     
     return 0;
 }
