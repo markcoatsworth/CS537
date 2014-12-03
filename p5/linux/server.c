@@ -17,7 +17,7 @@ response ServerRead(int inum, int block);
 response ServerCreat(int pinum, int type, char *name);
 response ServerUnlink(int pinum, char *name);
 response ServerShutdown();
-void DebugFileSystem();
+response ServerDebug();
 
 /*
 **	Global variables
@@ -32,13 +32,13 @@ int PortNumber;
 */
 void getargs(int argc, char *argv[])
 {
-    if (argc != 3) 
-    {
+	if (argc != 3) 
+	{
 		fprintf(stderr, "Usage: server [portnum] [file-system-image]\n");
 		exit(1);
-    }
-    PortNumber = atoi(argv[1]);
-    FileSystemImageFile = argv[2];
+	}
+	PortNumber = atoi(argv[1]);
+	FileSystemImageFile = argv[2];
 }
 
 /*
@@ -108,11 +108,15 @@ int main(int argc, char *argv[])
 		}
 		else if(strcmp(IncomingRequest.cmd, "UNLINK") == 0)
 		{
-			printf("[server] Received UNLINK message\n");
+			OutgoingResponse = ServerUnlink(IncomingRequest.inum, IncomingRequest.name);
 		}
 		else if(strcmp(IncomingRequest.cmd, "SHUTDOWN") == 0)
 		{
 			printf("[server] Received SHUTDOWN message\n");
+		}
+		else if(strcmp(IncomingRequest.cmd, "DEBUG") == 0)
+		{
+			ServerDebug();
 		}
 		
 		UDP_Write(SocketDescriptor, &UDPSocket, (char*)&OutgoingResponse, sizeof(response));
@@ -370,16 +374,12 @@ response ServerCreat(int pinum, int type, char *name)
 		{
 			if(DirectoryEntries[entry].inum == -1)
 			{
-				printf("[ServerCreat] Found an available directory entry at position %d\n", entry);
 				// Allocate a new inode
 				int i;
 				for(i = 0; i < IPB; i ++)
 				{
-					printf("[ServerCreat] Inodes[%d].type=%d\n", i, Inodes[i].type);
 					if(Inodes[i].type == 0)
 					{
-						printf("[ServerCreat] Allocating new inode %d\n", i);
-				
 						Inodes[i].type = type;
 						Inodes[i].size = 0;
 						
@@ -392,8 +392,6 @@ response ServerCreat(int pinum, int type, char *name)
 						write(FileSystemDescriptor, (const void*)(&Inodes), MFS_BLOCK_SIZE);
 						lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
 						write(FileSystemDescriptor, (const void*)(&DirectoryEntries), MFS_BLOCK_SIZE);
-						
-						DebugFileSystem();
 						
 						// All done! Return the succcess message
 						ResponseMessage.rc = i;
@@ -418,7 +416,79 @@ response ServerCreat(int pinum, int type, char *name)
 */
 response ServerUnlink(int pinum, char *name)
 {
+	// Local variables
 	response ResponseMessage;
+	struct __MFS_DirEnt_t DirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+	struct dinode Inodes[IPB];
+	
+	// Retrieve all inodes
+	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
+	
+	// Make sure the parent directory requested is valid
+	if(Inodes[pinum].type == MFS_DIRECTORY)
+	{
+		// Retrieve the block data for this directory
+		lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
+		read(FileSystemDescriptor, &DirectoryEntries, MFS_BLOCK_SIZE);
+		
+		int entry;
+		for(entry = 0; entry < MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t); entry++)
+		{
+			if(DirectoryEntries[entry].inum != -1)
+			{
+				printf("[ServerUnlink] Comparing %s to %s\n", DirectoryEntries[entry].name, name);
+				// Find the directory entry matching the requested name
+				if(strcmp(DirectoryEntries[entry].name, name) == 0)
+				{
+					// If this entry represents a directory, make sure it is empty
+					if(Inodes[DirectoryEntries[entry].inum].type == MFS_DIRECTORY)
+					{
+						printf("[ServerUnlink] Checking if directory is empty...\n");
+						
+						// Read in all subdirectory entries
+						int SubdirectoryValidEntries = 0;
+						struct __MFS_DirEnt_t SubdirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+						lseek(FileSystemDescriptor, Inodes[DirectoryEntries[entry].inum].addrs[0], 0);
+						read(FileSystemDescriptor, &SubdirectoryEntries, MFS_BLOCK_SIZE);
+						
+						// Count number of valid entries in the subdirectory. Valid entries are . and ..
+						int i;
+						for(i = 0; i < MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t); i ++)
+						{
+							if(SubdirectoryEntries[i].inum != -1)
+							{
+								SubdirectoryValidEntries++;
+							}
+						}
+						
+						// If we do not have exactly two valid entries (. and ..) then return a failure message
+						if(SubdirectoryValidEntries != 2)
+						{
+							perror("Directory not empty");
+							ResponseMessage.rc = -1;
+							return ResponseMessage;
+						}
+					}
+					
+					// Nullify this entry
+					DirectoryEntries[entry].inum = -1;
+					strcpy(DirectoryEntries[entry].name, "\0");
+				
+					// Write the updated list of directory entries to disk
+					lseek(FileSystemDescriptor, Inodes[pinum].addrs[0], 0);
+					write(FileSystemDescriptor, (const void*)(&DirectoryEntries), MFS_BLOCK_SIZE);
+					
+					// All done! Return the succcess message
+					ResponseMessage.rc = 0;
+					return ResponseMessage;
+				}
+			}
+		}
+	}
+				
+	// If we failed any of the conditions, return a response message indicating failure
+	ResponseMessage.rc = -1;
 	return ResponseMessage;
 }
 
@@ -434,12 +504,16 @@ response ServerShutdown()
 /*
 **	Dumps a bunch of data about the file system to stdout. Useful for debugging.
 */
-void DebugFileSystem()
+response ServerDebug()
 {
-	printf("[DebugFileSystem] Starting...\n");
+	char *FileBuffer;
+	char *TrunctuatedFileBuffer;
 	int i;
+	response ResponseMessage;
 	struct __MFS_DirEnt_t DirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
 	struct dinode Inodes[IPB];
+
+	printf("\n\n[ServerDebug] --------------------------------------------------------------------\n");
 	
 	// Retrieve the requested directory inode
 	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
@@ -449,7 +523,7 @@ void DebugFileSystem()
 	{
 		if(Inodes[i].type > 0)
 		{
-			printf("[DebugFileSystem] Inodes[%d]: type=%d, size=%d, addrs:\n", i, Inodes[i].type, Inodes[i].size);
+			printf("[ServerDebug] Inodes[%d]: type=%d, size=%d, addrs:\n", i, Inodes[i].type, Inodes[i].size);
 			int ptr;
 			for(ptr = 0; ptr < NDIRECT+1; ptr++)
 			{
@@ -472,17 +546,30 @@ void DebugFileSystem()
 					}
 					else if(Inodes[i].type == MFS_REGULAR_FILE)
 					{
-						printf("\tFile Contents:\n");
-						char *FileBuffer;
 						FileBuffer = (char*) malloc (MFS_BLOCK_SIZE * sizeof(char));
 						lseek(FileSystemDescriptor, Inodes[i].addrs[ptr], 0);
 						read(FileSystemDescriptor, FileBuffer, MFS_BLOCK_SIZE);
-						printf("\t%s\n", FileBuffer);
+						
+						printf("\tFile Contents:\n");
+						if(strlen(FileBuffer) > 50)
+						{
+							TrunctuatedFileBuffer = (char*) malloc (51 * sizeof(char));
+							strncpy(TrunctuatedFileBuffer, FileBuffer, 50);
+							printf("\t%s... (file trunctuated)\n", TrunctuatedFileBuffer);
+						}
+						else
+						{
+							printf("\t%s\n", FileBuffer);
+						}
+						
 						free(FileBuffer);
 					}
 				}
-			}
-			
+			}			
 		}
 	}
+	
+	printf("[ServerDebug] --------------------------------------------------------------------\n\n");
+	
+	return ResponseMessage;
 }

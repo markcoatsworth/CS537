@@ -77,7 +77,8 @@ int MFS_Write(int inum, char *buffer, int block);
 int MFS_Read(int inum, char *buffer, int block);
 int MFS_Creat(int pinum, int type, char *name);
 int MFS_Unlink(int pinum, char *name);
-int MFS_Shutdown(); 
+int MFS_Shutdown();
+int MFS_Debug();
 
 // Disk region offsets
 #define OFFSET_SUPERBLOCK MFS_BLOCK_SIZE

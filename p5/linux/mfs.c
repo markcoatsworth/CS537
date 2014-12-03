@@ -194,12 +194,67 @@ int MFS_Creat(int pinum, int type, char *name)
 
 int MFS_Unlink(int pinum, char *name)
 {
-	printf("[MFS_Unlink]\n");
+		// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message UnlinkRequest;
+	response UnlinkResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Write] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the CREAT message
+	strcpy(UnlinkRequest.cmd, "UNLINK");
+	UnlinkRequest.inum = pinum;
+	strcpy(UnlinkRequest.name, name);
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&UnlinkRequest, sizeof(message));
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&UnlinkResponse, sizeof(response));
+	printf("[MFS_Unlink] Received response, BytesReceived=%d, UnlinkResponse.rc=%d\n", BytesReceived, UnlinkResponse.rc);
+	
+	// Return the lookup response code (-1 if failure, 0 if success)
+	if(UnlinkResponse.rc < 0)
+	{
+		return -1;
+	}
+	
 	return 0;
 }
 
 int MFS_Shutdown()
 {
 	printf("[MFS_Shutdown]\n");
+	return 0;
+}
+
+int MFS_Debug()
+{
+	// Declare variables
+	int BytesReceived;
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message DebugRequest;
+	response DebugResponse;	
+
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Debug] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the DEBUG message
+	strcpy(DebugRequest.cmd, "DEBUG");
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&DebugRequest, sizeof(message));
+	
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&DebugResponse, sizeof(response));
+	
 	return 0;
 }

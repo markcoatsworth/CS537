@@ -45,8 +45,22 @@ int main(int argc, char *argv[])
     printf("[client] MFS_Read returned %d for the bogus read, ReadBuffer=%s\n", BogusRead, BogusReadBuffer);
     
 	// Do a valid creat
-	int ValidCreat = MFS_Creat(0, MFS_REGULAR_FILE, "creatfile.txt");    
+	int ValidCreat = MFS_Creat(0, MFS_REGULAR_FILE, "creatfile2.txt");    
 	printf("[client] MFS_Creat returned %d for the valid creat\n", ValidCreat);
+	
+	// Debug
+	MFS_Debug();
+	
+	// Unlink the file we just created
+	int ValidUnlink = MFS_Unlink(0, "creatfile2.txt");
+    printf("[client] MFS_Unlink returned %d for the valid unlink\n", ValidUnlink);
+    
+    // Debug
+    MFS_Debug();
+    
+    // Now try a bogus unlink, on a directory that is not empty
+    int BogusUnlink = MFS_Unlink(0, "code");
+    printf("[client] MFS_Unlink returned %d for the bogus unlink\n", BogusUnlink);
     
     return 0;
 }
