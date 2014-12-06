@@ -26,9 +26,9 @@ struct __attribute__((__packed__)) superblock {
 
 // On-disk inode structure
 struct __attribute__((__packed__)) dinode {
-	int type;           // File type
-	unsigned int size;            // Size of file (bytes)
-	unsigned int addrs[NDIRECT+1];   // Data block addresses
+  int type;           // File type
+  unsigned int size;            // Size of file (bytes)
+  unsigned int addrs[NDIRECT+1];   // Data block addresses
 };
 
 // Inodes per block.
@@ -44,9 +44,9 @@ struct __attribute__((__packed__)) dinode {
 #define BBLOCK(b, ninodes) (b/BPB + (ninodes)/IPB + 3)
 
 typedef struct __MFS_Stat_t {
-	int type;   // MFS_DIRECTORY or MFS_REGULAR
-	int size;   // bytes
-	// note: no permissions, access times, etc.
+    int type;   // MFS_DIRECTORY or MFS_REGULAR
+    int size;   // bytes
+    // note: no permissions, access times, etc.
 } MFS_Stat_t;
 
 typedef struct __MFS_DirEnt_t {
@@ -56,18 +56,18 @@ typedef struct __MFS_DirEnt_t {
           
          
 typedef struct __attribute__((__packed__)) __message__ {
-	char cmd[24];
-	int inum;
-	int type;
-	char block[4096];
-	char name[64];
-	int blocknum;
+        char cmd[24];
+        int inum;
+        int type;
+        char block[4096];
+        char name[64];
+        int blocknum;
 } message;
 
 typedef struct __attribute__((__packed__)) __response__ {
-	int rc;
-	MFS_Stat_t stat;
-	char block[4096];
+        int rc;
+        MFS_Stat_t stat;
+        char block[4096];
 } response;
 
 int MFS_Init(char *hostname, int port);
@@ -77,8 +77,7 @@ int MFS_Write(int inum, char *buffer, int block);
 int MFS_Read(int inum, char *buffer, int block);
 int MFS_Creat(int pinum, int type, char *name);
 int MFS_Unlink(int pinum, char *name);
-int MFS_Shutdown();
-int MFS_Debug();
+int MFS_Shutdown(); 
 
 // Disk region offsets
 #define OFFSET_SUPERBLOCK MFS_BLOCK_SIZE

@@ -245,18 +245,6 @@ int MFS_Shutdown()
 	strcpy(ShutdownRequest.cmd, "SHUTDOWN");
 	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&ShutdownRequest, sizeof(message));
 	
-	/*
-	// Wait for the response
-	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ShutdownResponse, sizeof(response));
-	printf("[MFS_Unlink] Received response, BytesReceived=%d, ShutdownResponse.rc=%d\n", BytesReceived, ShutdownResponse.rc);
-	
-	// Return the lookup response code (-1 if failure, 0 if success)
-	if(ShutdownResponse.rc < 0)
-	{
-		return -1;
-	}
-	*/
-	
 	// SHUTDOWN does not send back a message. Return success.
 	return 0;
 }
