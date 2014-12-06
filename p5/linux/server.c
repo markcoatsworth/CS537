@@ -112,7 +112,9 @@ int main(int argc, char *argv[])
 		}
 		else if(strcmp(IncomingRequest.cmd, "SHUTDOWN") == 0)
 		{
-			printf("[server] Received SHUTDOWN message\n");
+			//OutgoingResponse = ServerShutdown();
+			fsync(FileSystemDescriptor);
+			exit(0);
 		}
 		else if(strcmp(IncomingRequest.cmd, "DEBUG") == 0)
 		{

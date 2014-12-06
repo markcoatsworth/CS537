@@ -194,7 +194,7 @@ int MFS_Creat(int pinum, int type, char *name)
 
 int MFS_Unlink(int pinum, char *name)
 {
-		// Declare variables
+	// Declare variables
 	int BytesReceived;
 	int BytesSent;
 	int SocketDescriptor = UDP_Open(0);
@@ -229,7 +229,35 @@ int MFS_Unlink(int pinum, char *name)
 
 int MFS_Shutdown()
 {
-	printf("[MFS_Shutdown]\n");
+	// Declare variables
+	int BytesSent;
+	int SocketDescriptor = UDP_Open(0);
+	message ShutdownRequest;
+	
+	// Verify that UDPSocket has been initialized
+	if(UDPSocket.sin_port <= 0)
+	{
+		perror("[MFS_Write] Error: UDPSocket not initialized\n");
+		return -1;
+	}
+	
+	// Send the SHUTDOWN message
+	strcpy(ShutdownRequest.cmd, "SHUTDOWN");
+	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&ShutdownRequest, sizeof(message));
+	
+	/*
+	// Wait for the response
+	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ShutdownResponse, sizeof(response));
+	printf("[MFS_Unlink] Received response, BytesReceived=%d, ShutdownResponse.rc=%d\n", BytesReceived, ShutdownResponse.rc);
+	
+	// Return the lookup response code (-1 if failure, 0 if success)
+	if(ShutdownResponse.rc < 0)
+	{
+		return -1;
+	}
+	*/
+	
+	// SHUTDOWN does not send back a message. Return success.
 	return 0;
 }
 

@@ -62,5 +62,9 @@ int main(int argc, char *argv[])
     int BogusUnlink = MFS_Unlink(0, "code");
     printf("[client] MFS_Unlink returned %d for the bogus unlink\n", BogusUnlink);
     
-    return 0;
+    // Shutdown
+    MFS_Shutdown();
+    printf("[client] Sent shutdown, now exiting...\n");
+    
+    exit(0);
 }
