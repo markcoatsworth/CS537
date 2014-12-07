@@ -10,12 +10,30 @@ int main(int argc, char *argv[])
     int init = MFS_Init("127.0.0.1", 1666);
     printf("[client] MFS_Init returned %d\n", init);
    
-   	// Create a new directory
-   	int NewDirCreate = MFS_Creat(0, MFS_DIRECTORY, "TestDir");
-   	printf("[client] MFS_Creat returned %d\n", NewDirCreate);
+   	// Create a new file
+   	int NewFileCreate = MFS_Creat(0, MFS_REGULAR_FILE, "file666.txt");
+   	printf("[client] MFS_Creat returned %d\n", NewFileCreate);
    	
+   	int NewFileInum = MFS_Lookup(0, "file666.txt");
+   	printf("[client] MFS_Lookup returned for file666.txt %d\n", NewFileInum);
+   	
+   	// Now write a block to this file
+   	int NewBlockWrite = MFS_Write(NewFileInum, "test file contents!", 0);
+   	printf("[client] MFS_Write returned %d\n", NewBlockWrite);
+   	
+   	MFS_Debug();
+
+   	// Now write a newblock to this file
+   	NewBlockWrite = MFS_Write(NewFileInum, "a second block!", 1);
+   	printf("[client] MFS_Write returned %d\n", NewBlockWrite);
+   	   	
    	MFS_Debug();	
    
+    // Overwrite a block
+    int OverwriteBlock = MFS_Write(NewFileInum, "overwriting the 0th block of the file", 0);
+    printf("[client] MFS_Write returned %d for overwrite\n", OverwriteBlock);
+    
+    MFS_Debug();
   	   
     // Shutdown
     MFS_Shutdown();

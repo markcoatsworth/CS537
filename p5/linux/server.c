@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
 		}
 		else if(strcmp(IncomingRequest.cmd, "WRITE") == 0)
 		{
+			printf("[server] WRITE inum=%d, blocknum=%d, block=%s\n", IncomingRequest.inum, IncomingRequest.blocknum, IncomingRequest.block);
 			OutgoingResponse = ServerWrite(IncomingRequest.inum, IncomingRequest.block, IncomingRequest.blocknum);
 		}
 		else if(strcmp(IncomingRequest.cmd, "READ") == 0)
@@ -287,9 +288,14 @@ response ServerWrite(int inum, char *buffer, int block)
 {
 	// Local variables
 	int BytesWritten;
+	int DataBitmap[1024];
 	response ResponseMessage;
-	struct dinode Inodes[IPB];
+	struct dinode Inodes[IPB];	
 	
+	// Read in the data bitmap
+	lseek(FileSystemDescriptor, OFFSET_DATABITMAP, 0);
+	read(FileSystemDescriptor, (void*)(&DataBitmap), MFS_BLOCK_SIZE);
+
 	// Retrieve the requested directory inode
 	lseek(FileSystemDescriptor, OFFSET_INODES, 0);
 	read(FileSystemDescriptor, (void*)Inodes, MFS_BLOCK_SIZE);
@@ -300,20 +306,65 @@ response ServerWrite(int inum, char *buffer, int block)
 		// Make sure block falls within valid range
 		if(block >= 0 && block <= NDIRECT)
 		{
-			// Verify that the requested block entry is valid
-			if(Inodes[inum].addrs[block] != -1)
+			// If requested block entry is unused, allocate the new block
+			// Also allocate all blocks between the previously high block and the newly requested block (??)
+			if(Inodes[inum].addrs[block] == -1)
 			{
-				// Write the buffer to the address specified by this inode pointer
-				lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
-				BytesWritten = write(FileSystemDescriptor, buffer, MFS_BLOCK_SIZE);
-				
-				if(BytesWritten > 0)
+				// First, determine the last inode block index that is being used
+				int BlockAllocator;
+				int PrevHighestBlockIndex;
+				for(PrevHighestBlockIndex = 0; PrevHighestBlockIndex <= NDIRECT; PrevHighestBlockIndex++)
 				{
-					// If write was successful, return a success code
-					ResponseMessage.rc = BytesWritten;
-					return ResponseMessage;
+					printf("[ServerWrite] Inodes[%d].addrs[%d]=%d\n", inum, PrevHighestBlockIndex, Inodes[inum].addrs[PrevHighestBlockIndex]);
+					if(Inodes[inum].addrs[PrevHighestBlockIndex] == -1)
+					{
+						printf("[ServerWrite] Exit the loop!\n");
+						break;
+					}
+					else
+					{
+						printf("[ServerWrite] Shouldn't be seeing this!\n");
+
+					}
 				}
+				
+				for(BlockAllocator = PrevHighestBlockIndex; BlockAllocator <= block; BlockAllocator++)
+				{
+					
+					// Determine next available block address, and update the data bitmap
+					int bit;
+					for(bit = 0; bit < 1024; bit++)
+					{
+						if(DataBitmap[bit] == 0)
+						{
+							DataBitmap[bit] = 1;
+							break;
+						}
+					}
+				
+					// Update the inode
+					Inodes[inum].size += MFS_BLOCK_SIZE;
+					Inodes[inum].addrs[BlockAllocator] = OFFSET_DATA + (bit * MFS_BLOCK_SIZE);
+				}
+
+				// Write data structures to disk
+				lseek(FileSystemDescriptor, OFFSET_DATABITMAP, 0);
+				write(FileSystemDescriptor, (const void*)DataBitmap, MFS_BLOCK_SIZE);
+				lseek(FileSystemDescriptor, OFFSET_INODES, 0);
+				write(FileSystemDescriptor, (const void*)Inodes, MFS_BLOCK_SIZE);
 			}
+			
+			// Write the buffer to the address specified by this inode pointer
+			lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
+			BytesWritten = write(FileSystemDescriptor, buffer, MFS_BLOCK_SIZE);
+			
+			if(BytesWritten > 0)
+			{
+				// If write was successful, return a success code
+				ResponseMessage.rc = BytesWritten;
+				return ResponseMessage;
+			}
+		
 		}
 	}		
 
@@ -617,7 +668,6 @@ response ServerDebug()
 						lseek(FileSystemDescriptor, Inodes[i].addrs[ptr], 0);
 						read(FileSystemDescriptor, FileBuffer, MFS_BLOCK_SIZE);
 						
-						printf("\tFile Contents:\n");
 						if(strlen(FileBuffer) > 50)
 						{
 							TrunctuatedFileBuffer = (char*) malloc (51 * sizeof(char));
@@ -626,7 +676,7 @@ response ServerDebug()
 						}
 						else
 						{
-							printf("\t%s\n", FileBuffer);
+							printf("\t\t%s\n", FileBuffer);
 						}
 						
 						free(FileBuffer);

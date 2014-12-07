@@ -147,7 +147,12 @@ int MFS_Write(int inum, char *buffer, int block)
 	printf("[MFS_Write] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, WriteResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
-	return WriteResponse.rc;
+	if(WriteResponse.rc == -1)
+	{
+		return -1;
+	}
+	
+	return 0;
 }
 
 /*
