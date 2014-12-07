@@ -9,7 +9,29 @@ int main(int argc, char *argv[])
     // Open the server on the specified port
     int init = MFS_Init("127.0.0.1", 1666);
     printf("[client] MFS_Init returned %d\n", init);
-   /* 
+   
+   	// Create a new directory
+   	int NewDirCreate = MFS_Creat(0, MFS_DIRECTORY, "TestDir");
+   	printf("[client] MFS_Creat returned %d\n", NewDirCreate);
+   	
+   	MFS_Debug();	
+   
+  	   
+    // Shutdown
+    MFS_Shutdown();
+    printf("[client] Sent shutdown, now exiting...\n");
+    
+    exit(0);
+}
+
+
+
+
+
+
+
+
+/* 
     // Look up the name of a file under the root directory
 	int ValidLookup = MFS_Lookup(0, "test1.txt");
     printf("[client] MFS_Lookup returned %d for the valid lookup name\n", ValidLookup);
@@ -62,32 +84,3 @@ int main(int argc, char *argv[])
     int BogusUnlink = MFS_Unlink(0, "code");
     printf("[client] MFS_Unlink returned %d for the bogus unlink\n", BogusUnlink);
    */ 
-   
-  	// Get some stats
-  	// Get some stats on the valid lookup
-	MFS_Stat_t ValidStat;
-    int ValidStatReturnCode = MFS_Stat(0, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-	ValidStatReturnCode = MFS_Stat(1, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-	ValidStatReturnCode = MFS_Stat(2, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-	ValidStatReturnCode = MFS_Stat(3, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-	ValidStatReturnCode = MFS_Stat(4, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-ValidStatReturnCode = MFS_Stat(5, &ValidStat);
-    printf("[client] MFS_Stat returned %d for the valid stat lookup; ValidStat.size=%d, ValidStat.type=%d\n", ValidStatReturnCode, ValidStat.size, ValidStat.type);
-
-   
-    // Shutdown
-    MFS_Shutdown();
-    printf("[client] Sent shutdown, now exiting...\n");
-    
-    exit(0);
-}

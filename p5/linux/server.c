@@ -169,7 +169,7 @@ int FileSystemInitialize()
 		Inodes[0].addrs[addr] = -1;
 	}
 	
-	// Initialize all other inodes
+	// Initialize all other inodes. Again, unused addr values initialized to -1.
 	for(entry = 1; entry < 64; entry ++)
 	{
 		Inodes[entry].type = 0;
@@ -398,17 +398,61 @@ response ServerCreat(int pinum, int type, char *name)
 			if(DirectoryEntries[entry].inum == -1)
 			{
 				// Allocate a new inode
-				int i;
-				for(i = 0; i < IPB; i ++)
+				int inum;
+				for(inum = 0; inum < IPB; inum ++)
 				{
-					if(Inodes[i].type == 0)
+					if(Inodes[inum].type == 0)
 					{
-						Inodes[i].type = type;
-						Inodes[i].size = 0;
+						Inodes[inum].type = type;
+						Inodes[inum].size = 0;
 						
 						// Now that we have an inode #, allocate the new directory entry
 						strcpy(DirectoryEntries[entry].name, name);
-						DirectoryEntries[entry].inum = i;
+						DirectoryEntries[entry].inum = inum;
+						
+						// If we are creating a directory, we need to allocate a new block and setup the . and .. entries
+						if(type == MFS_DIRECTORY)
+						{
+							// Variables for dealing with new directory
+							int DataBitmap[1024];
+							struct __MFS_DirEnt_t NewDirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
+							
+							// Read in the data bitmap
+							lseek(FileSystemDescriptor, OFFSET_DATABITMAP, 0);
+							read(FileSystemDescriptor, (void*)(&DataBitmap), MFS_BLOCK_SIZE);
+							
+							// Find the next available slot in the data bitmap
+							int bit;
+							for(bit = 0; bit < 1024; bit ++)
+							{
+								if(DataBitmap[bit] == 0)
+								{
+									// Set the slot to full, then bail out of the for loop
+									DataBitmap[bit] = 1;
+									break;
+								}
+							}
+							
+							// Setup the data block of new directory entries
+							strcpy(NewDirectoryEntries[0].name, ".\0");
+							NewDirectoryEntries[0].inum = inum;
+							strcpy(NewDirectoryEntries[1].name, "..\0");
+							NewDirectoryEntries[1].inum = pinum;
+							for(entry = 2; entry < 64; entry++)
+							{
+								NewDirectoryEntries[entry].inum = -1;
+							}
+							
+							// Update inodes structure
+							Inodes[inum].size = 4096;
+							Inodes[inum].addrs[0] = OFFSET_DATA + (bit * MFS_BLOCK_SIZE);
+
+							// Now write these updated structures to disk
+							lseek(FileSystemDescriptor, OFFSET_DATABITMAP, 0);
+							write(FileSystemDescriptor, (const void*)(&DataBitmap), MFS_BLOCK_SIZE);
+							lseek(FileSystemDescriptor, Inodes[inum].addrs[0], 0);
+							write(FileSystemDescriptor, (const void*)(&NewDirectoryEntries), MFS_BLOCK_SIZE);
+						}
 						
 						// Write the new inode list and new directory entries to disk
 						lseek(FileSystemDescriptor, OFFSET_INODES, 0);
@@ -417,7 +461,7 @@ response ServerCreat(int pinum, int type, char *name)
 						write(FileSystemDescriptor, (const void*)(&DirectoryEntries), MFS_BLOCK_SIZE);
 						
 						// All done! Return the succcess message
-						ResponseMessage.rc = i;
+						ResponseMessage.rc = inum;
 						return ResponseMessage;
 					}
 				}
@@ -546,7 +590,7 @@ response ServerDebug()
 	{
 		if(Inodes[i].type > 0)
 		{
-			printf("[ServerDebug] Inodes[%d]: type=%d, size=%d, addrs:\n", i, Inodes[i].type, Inodes[i].size);
+			printf("Inodes[%d]: type=%d, size=%d, addrs:\n", i, Inodes[i].type, Inodes[i].size);
 			int ptr;
 			for(ptr = 0; ptr < NDIRECT+1; ptr++)
 			{
