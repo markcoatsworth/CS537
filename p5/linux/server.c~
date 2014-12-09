@@ -414,7 +414,7 @@ response ServerRead(int inum, int block)
 					int i;
 					for(i = 0; i < MFS_BLOCK_SIZE; i ++)
 					{
-						printf("%c", ReadBuffer[i]);
+						printf("%c", buffer[i]);
 					}
 					printf("\n--\n");			
 					if(BytesRead > 0)

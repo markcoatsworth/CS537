@@ -36,7 +36,7 @@ def gen_block(number):
    for i in range(len(end)):
       b[-(i+1)] = end[-(i+1)]           
       #b[i + len(start)] = end[i]
-   #print "b=",''.join(b) 
+   print "b=",''.join(b) 
    return b
 
 class MfsTest(Test):

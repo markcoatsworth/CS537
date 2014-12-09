@@ -14,12 +14,15 @@ class WriteTest(MfsTest):
       inum = self.lookup(0, "test")
       
       buf1 = gen_block(1)
+      print "Writing buf1=", ''.join(buf1)
       self.write(inum, buf1, 0)
       
       buf2 = BlockBuffer()
       self.read(inum, buf2, 0)
+      print "Reading buf2=", ''.join(buf2)
       
       if not bufs_equal(buf1, buf2):
+         print "buf1=", ''.join(buf1), ", buf2=", ''.join(buf2)
          raise Failure("Corrupt data returned by read")
 
       self.shutdown()

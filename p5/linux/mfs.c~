@@ -199,7 +199,7 @@ int MFS_Read(int inum, char *buffer, int block)
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ReadResponse, sizeof(response));
 	if(ReadResponse.rc > 0)
 	{
-		PythonStringCopy(buffer, ReadResponse.block, 4096);
+		strcpy(buffer, ReadResponse.block);
 		ReadResponse.rc = 0; // now reset the response code to 0 to indicate success
 	}
 	printf("[MFS_Read] Received response, BytesReceived=%d, ReadResponse.rc=%d, buffer=%s, strlen(buffer)=%d\n", BytesReceived, ReadResponse.rc, buffer, (int)strlen(buffer));

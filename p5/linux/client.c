@@ -21,20 +21,26 @@ int main(int argc, char *argv[])
    	int NewBlockWrite = MFS_Write(NewFileInum, "test file contents!", 0);
    	printf("[client] MFS_Write returned %d\n", NewBlockWrite);
    	
-   	MFS_Debug();
+   	//MFS_Debug();
 
    	// Now write a newblock to this file
    	NewBlockWrite = MFS_Write(NewFileInum, "a second block!", 1);
    	printf("[client] MFS_Write returned %d\n", NewBlockWrite);
    	   	
-   	MFS_Debug();	
+   	//MFS_Debug();	
    
     // Overwrite a block
     int OverwriteBlock = MFS_Write(NewFileInum, "overwriting the 0th block of the file", 0);
     printf("[client] MFS_Write returned %d for overwrite\n", OverwriteBlock);
     
-    MFS_Debug();
-  	   
+    //MFS_Debug();
+  	
+  	// Do a valid read (of the data we just wrote)
+	char *ValidReadBuffer;
+	ValidReadBuffer = (char*)malloc(MFS_BLOCK_SIZE * sizeof(char));
+	int ValidRead = MFS_Read(NewFileInum, ValidReadBuffer, 0);
+	printf("[client] MFS_Read returned %d for the valid read, ReadBuffer=%s\n", ValidRead, ValidReadBuffer);
+  	
     // Shutdown
     MFS_Shutdown();
     printf("[client] Sent shutdown, now exiting...\n");
