@@ -70,7 +70,6 @@ int MFS_Lookup(int pinum, char *name)
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&LookupResponse, sizeof(response));
-	printf("[MFS_Lookup] Received response, BytesReceived=%d, LookupResponse.rc=%d\n", BytesReceived, LookupResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, or inode # if success)
 	return LookupResponse.rc;
@@ -107,7 +106,6 @@ int MFS_Stat(int inum, MFS_Stat_t *m)
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&StatResponse, sizeof(response));
 	m->type = StatResponse.stat.type;
 	m->size = StatResponse.stat.size;
-	printf("[MFS_Stat] Received response, BytesReceived=%d, StatResponse.rc=%d, m->size=%d\n", BytesReceived, StatResponse.rc, m->size);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	return StatResponse.rc;
@@ -121,17 +119,6 @@ int MFS_Stat(int inum, MFS_Stat_t *m)
 */
 int MFS_Write(int inum, char *buffer, int block)
 {
-	printf("[MFS_Write] Dumping buffer...\n");
-	int i;
-	for(i = 0; i < 4096; i ++)
-	{
-		if(buffer[i] != 0)
-		{
-			printf("%c", buffer[i]);
-		}
-	}
-	printf("\n--\n");
-
 	// Declare variables
 	int BytesReceived;
 	int BytesSent;
@@ -149,13 +136,12 @@ int MFS_Write(int inum, char *buffer, int block)
 	// Send the WRITE message
 	strcpy(WriteRequest.cmd, "WRITE");
 	WriteRequest.inum = inum;
-	PythonStringCopy(WriteRequest.block, buffer, 4096);
+	memcpy(WriteRequest.block, buffer, 4096);
 	WriteRequest.blocknum = block;
 	BytesSent = UDP_Write(SocketDescriptor, &UDPSocket, (char*)&WriteRequest, sizeof(message));
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&WriteResponse, sizeof(response));
-	printf("[MFS_Write] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, WriteResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	if(WriteResponse.rc == -1)
@@ -199,10 +185,10 @@ int MFS_Read(int inum, char *buffer, int block)
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ReadResponse, sizeof(response));
 	if(ReadResponse.rc > 0)
 	{
-		PythonStringCopy(buffer, ReadResponse.block, 4096);
+		memcpy(buffer, ReadResponse.block, 4096);
 		ReadResponse.rc = 0; // now reset the response code to 0 to indicate success
 	}
-	printf("[MFS_Read] Received response, BytesReceived=%d, ReadResponse.rc=%d, buffer=%s, strlen(buffer)=%d\n", BytesReceived, ReadResponse.rc, buffer, (int)strlen(buffer));
+	//printf("[MFS_Read] Received response, BytesReceived=%d, ReadResponse.rc=%d, buffer=%s, strlen(buffer)=%d\n", BytesReceived, ReadResponse.rc, buffer, (int)strlen(buffer));
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	return ReadResponse.rc;
@@ -247,7 +233,6 @@ int MFS_Creat(int pinum, int type, char *name)
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&CreatResponse, sizeof(response));
-	printf("[MFS_Creat] Received response, BytesReceived=%d, WriteResponse.rc=%d\n", BytesReceived, CreatResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	if(CreatResponse.rc < 0)
@@ -295,7 +280,6 @@ int MFS_Unlink(int pinum, char *name)
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&UnlinkResponse, sizeof(response));
-	printf("[MFS_Unlink] Received response, BytesReceived=%d, UnlinkResponse.rc=%d\n", BytesReceived, UnlinkResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	if(UnlinkResponse.rc < 0)
@@ -362,19 +346,4 @@ int MFS_Debug()
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&DebugResponse, sizeof(response));
 	
 	return 0;
-}
-
-/*
-**	Copies a Python string which may include null characters.
-*/
-void PythonStringCopy(char *deststr, char *srcstr, int length)
-{
-	int i;
-	for(i = 0; i < length; i ++)
-	{
-		
-			deststr[i] = srcstr[i];
-
-		
-	}
 }

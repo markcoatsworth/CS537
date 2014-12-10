@@ -199,7 +199,7 @@ int MFS_Read(int inum, char *buffer, int block)
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&ReadResponse, sizeof(response));
 	if(ReadResponse.rc > 0)
 	{
-		strcpy(buffer, ReadResponse.block);
+		PythonStringCopy(buffer, ReadResponse.block, 4096);
 		ReadResponse.rc = 0; // now reset the response code to 0 to indicate success
 	}
 	printf("[MFS_Read] Received response, BytesReceived=%d, ReadResponse.rc=%d, buffer=%s, strlen(buffer)=%d\n", BytesReceived, ReadResponse.rc, buffer, (int)strlen(buffer));
@@ -295,7 +295,7 @@ int MFS_Unlink(int pinum, char *name)
 	
 	// Wait for the response
 	BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&UnlinkResponse, sizeof(response));
-	printf("[MFS_Unlink] Received response, BytesReceived=%d, UnlinkResponse.rc=%d\n", BytesReceived, UnlinkResponse.rc);
+	//printf("[MFS_Unlink] Received response, BytesReceived=%d, UnlinkResponse.rc=%d\n", BytesReceived, UnlinkResponse.rc);
 	
 	// Return the lookup response code (-1 if failure, 0 if success)
 	if(UnlinkResponse.rc < 0)
@@ -372,9 +372,6 @@ void PythonStringCopy(char *deststr, char *srcstr, int length)
 	int i;
 	for(i = 0; i < length; i ++)
 	{
-		
-			deststr[i] = srcstr[i];
-
-		
+		deststr[i] = srcstr[i];
 	}
 }

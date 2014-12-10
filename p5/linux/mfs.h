@@ -80,8 +80,6 @@ int MFS_Unlink(int pinum, char *name);
 int MFS_Shutdown(); 
 int MFS_Debug();
 
-void PythonStringCopy(char *deststr, char *srcstr, int length);
-
 // Disk region offsets
 #define OFFSET_SUPERBLOCK MFS_BLOCK_SIZE
 #define OFFSET_INODES (2*MFS_BLOCK_SIZE)

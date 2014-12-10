@@ -1,0 +1,13 @@
+Name: Mark Coatsworth
+CSL-ID: coatsworth
+Name: 
+CSL-ID:
+(Leave the second name and ID blank if working alone)
+
+Linux-Implementation Details:
+*	Pretty straightforward, I implemented this pretty much as directed by the project file
+*	I "cheated" a bit with the bitmap array. Since we have 4096 bytes per block and only 1024 data blocks, I just used a 4-byte integer to represent each data block. This was horribly wasteful, but also really easy :)
+*	For the MFS API, I started by writing the MFS_Stat() function, then I copied + pasted it and made small changes to build out the other functions. This resulted in a lot of duplicate code, which technically is bad, but in this case made the different functions modular and much easier to debug.
+
+XV6-Implementation Details:
+*	Did not do P5b -- I'll take this one as my drop assignment.

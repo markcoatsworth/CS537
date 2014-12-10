@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	}
 	
 	// Enter the main server loop
-	printf("[server] Started UDP file system server\n");
+	//printf("[server] Started UDP file system server\n");
 	while(1)
 	{
 		//int BytesReceived = UDP_Read(SocketDescriptor, &UDPSocket, (char*)&IncomingRequest, sizeof(message));
@@ -97,17 +97,17 @@ int main(int argc, char *argv[])
 		}
 		else if(strcmp(IncomingRequest.cmd, "WRITE") == 0)
 		{
-			printf("[server] WRITE inum=%d, blocknum=%d, block=%s, strlen(block)=%d\n", IncomingRequest.inum, IncomingRequest.blocknum, IncomingRequest.block, (int)strlen(IncomingRequest.block));
+			//printf("[server] WRITE inum=%d, blocknum=%d, block=%s, strlen(block)=%d\n", IncomingRequest.inum, IncomingRequest.blocknum, IncomingRequest.block, (int)strlen(IncomingRequest.block));
 			OutgoingResponse = ServerWrite(IncomingRequest.inum, IncomingRequest.block, IncomingRequest.blocknum);
 		}
 		else if(strcmp(IncomingRequest.cmd, "READ") == 0)
 		{
-			printf("[server] READ inum=%d, blocknum=%d\n", IncomingRequest.inum, IncomingRequest.blocknum);
+			//printf("[server] READ inum=%d, blocknum=%d\n", IncomingRequest.inum, IncomingRequest.blocknum);
 			OutgoingResponse = ServerRead(IncomingRequest.inum, IncomingRequest.blocknum);
 		}
 		else if(strcmp(IncomingRequest.cmd, "CREAT") == 0)
 		{
-			printf("[server] CREATE inum=%d, type=%d, name=%s\n", IncomingRequest.inum, IncomingRequest.type, IncomingRequest.name);
+			//printf("[server] CREATE inum=%d, type=%d, name=%s\n", IncomingRequest.inum, IncomingRequest.type, IncomingRequest.name);
 			OutgoingResponse = ServerCreat(IncomingRequest.inum, IncomingRequest.type, IncomingRequest.name);
 		}
 		else if(strcmp(IncomingRequest.cmd, "UNLINK") == 0)
@@ -318,10 +318,8 @@ response ServerWrite(int inum, char *buffer, int block)
 				int PrevHighestBlockIndex;
 				for(PrevHighestBlockIndex = 0; PrevHighestBlockIndex <= NDIRECT; PrevHighestBlockIndex++)
 				{
-					//printf("[ServerWrite] Inodes[%d].addrs[%d]=%d\n", inum, PrevHighestBlockIndex, Inodes[inum].addrs[PrevHighestBlockIndex]);
 					if(Inodes[inum].addrs[PrevHighestBlockIndex] == -1)
 					{
-						printf("[ServerWrite] Found next available block=%d, exit the loop!\n", PrevHighestBlockIndex);
 						break;
 					}
 				}
@@ -354,13 +352,6 @@ response ServerWrite(int inum, char *buffer, int block)
 			
 			// Write the buffer to the address specified by this inode pointer
 			lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
-			printf("[ServerWrite] Writing buffer=");			
-			int i;
-			for(i = 0; i < MFS_BLOCK_SIZE; i ++)
-			{
-				printf("%c", buffer[i]);
-			}
-			printf("\n--\n");
 			BytesWritten = write(FileSystemDescriptor, buffer, MFS_BLOCK_SIZE);
 			
 			if(BytesWritten > 0)
@@ -410,18 +401,11 @@ response ServerRead(int inum, int block)
 				{
 					lseek(FileSystemDescriptor, Inodes[inum].addrs[block], 0);
 					BytesRead = read(FileSystemDescriptor, ReadBuffer, MFS_BLOCK_SIZE);
-					printf("[ServerRead] ReadBuffer=");			
-					int i;
-					for(i = 0; i < MFS_BLOCK_SIZE; i ++)
-					{
-						printf("%c", ReadBuffer[i]);
-					}
-					printf("\n--\n");			
 					if(BytesRead > 0)
 					{
 						// If read was successful, return the block data + a success code
 						ResponseMessage.rc = BytesRead;
-						PythonStringCopy(ResponseMessage.block, ReadBuffer, 4096);
+						memcpy(ResponseMessage.block, ReadBuffer, 4096);
 						return ResponseMessage;
 					}
 				}
@@ -567,15 +551,12 @@ response ServerUnlink(int pinum, char *name)
 		{
 			if(DirectoryEntries[entry].inum != -1)
 			{
-				printf("[ServerUnlink] Comparing %s to %s\n", DirectoryEntries[entry].name, name);
 				// Find the directory entry matching the requested name
 				if(strcmp(DirectoryEntries[entry].name, name) == 0)
 				{
 					// If this entry represents a directory, make sure it is empty
 					if(Inodes[DirectoryEntries[entry].inum].type == MFS_DIRECTORY)
 					{
-						printf("[ServerUnlink] Checking if directory is empty...\n");
-						
 						// Read in all subdirectory entries
 						int SubdirectoryValidEntries = 0;
 						struct __MFS_DirEnt_t SubdirectoryEntries[MFS_BLOCK_SIZE / sizeof(struct __MFS_DirEnt_t)];
